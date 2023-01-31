@@ -1,33 +1,41 @@
-"""NMR time fit class.
-
-Notes: 
-    1. method for calculating lsqcurve fitting, used dogleg method for optimization
-        https://github.com/nmayorov/bounded-lsq
-"""
+"""NMR time fit class."""
+import logging
 import pdb
+from typing import Optional
 
-import matplotlib
 import numpy as np
-import scipy.sparse as sps
-from bounded_lsq.least_squares import least_squares
-from scipy.stats import norm
-
-matplotlib.use("Agg")
-from matplotlib import pyplot as plt
-from pylab import *
+from scipy.optimize import least_squares
 
 
 class NMR_Mix:
-    """Base Class for curve fitting for spectroscopy."""
+    """Base Class for curve fitting for spectroscopy.
+
+    Attributes:
+        area (np.ndarray): Area of each component.
+        freq (np.ndarray): Frequency of each component.
+        fwhm (np.ndarray): FWHM of each component.
+        phase (np.ndarray): Phase of each component.
+        fwhmL (np.ndarray): Lorentzian FWHM of each component.
+        fwhmG (np.ndarray): Gaussian FWHM of each component.
+        method (str): Method for fitting, either "voigt" or "lorentzian".
+        ncomp (int): Number of components.
+    """
 
     def __init__(
-        self, area, freq, phase, fwhm=[], fwhmL=[], fwhmG=[], method="lorenzian"
+        self,
+        area: np.ndarray,
+        freq: np.ndarray,
+        phase: np.ndarray,
+        fwhm: np.ndarray = np.array([]),
+        fwhmL: np.ndarray = np.array([]),
+        fwhmG: np.ndarray = np.array([]),
+        method="voigt",
     ):
+        """Initialize NMR_Mix class."""
         self.area = np.array([area]).flatten()
         self.freq = np.array([freq]).flatten()
         self.fwhm = np.array([fwhm]).flatten()
         self.phase = np.array([phase]).flatten()
-
         self.fwhmL = np.array([fwhmL]).flatten()
         self.fwhmG = np.array([fwhmG]).flatten()
         self.method = method
@@ -37,129 +45,37 @@ class NMR_Mix:
         else:
             self.ncomp = 4
 
-    def calc_time_sig(self, t):
-        n_pts = np.size(t)
-        n_fre = int(np.size(self.freq))  # number of frequency componnets
-        time_sig = np.zeros(np.shape(t))
+    def get_time_function(self, tdata: np.ndarray):
+        """Get time function for given time points.
+
+        Available for both voigt and lorentzian fitting.
+
+        Args:
+            t (np.ndarray): Time points in seconds.
+        """
+        n_fre = int(np.size(self.freq))
+        time_sig = np.zeros(np.shape(tdata))
 
         if self.method == "voigt":
             for k in range(0, n_fre):
-                # add up all components to time signal using viogt kernel
                 time_sig = time_sig + self.area[k] * np.exp(
                     1j * np.pi / 180.0 * self.phase[k]
-                    + 1j * 2 * np.pi * t * self.freq[k]
-                    - np.pi * t * self.fwhmL[k]
-                    - t**2 * 8 * np.log(2) * self.fwhmG[k] ** 2
+                    + 1j * 2 * np.pi * tdata * self.freq[k]
+                    - np.pi * tdata * self.fwhmL[k]
+                    - tdata**2 * 8 * np.log(2) * self.fwhmG[k] ** 2
                 )
         else:
             for k in range(0, n_fre):
-                # add up all components to time signal using Lorenstian kernel
                 time_sig = time_sig + self.area[k] * np.exp(
                     1j * np.pi / 180.0 * self.phase[k]
-                    + 1j * 2 * np.pi * t * self.freq[k]
-                    - np.pi * t * self.fwhm[k]
+                    + 1j * 2 * np.pi * tdata * self.freq[k]
+                    - np.pi * tdata * self.fwhm[k]
                 )
-
         return time_sig
 
-    def componentTimeDomainSignal(self, t):
-
-        """Calculates the time domain signal from the individual components
-        of the NMR mix at the given time points (t is in sec). Note,
-        this function returns the time signal for each individual
-        component. The overall "mix" signal can be obtained with
-        calcTimeDomainSignal"""
-
-        n_pts = np.size(t)
-        n_fre = int(np.size(self.freq))  # number of frequency componnets
-        componentTimeDomainSignal = np.zeros([n_pts, n_fre], dtype=complex)
-
-        componentTimeDomainSignal[:, 0] = (
-            self.area[0]
-            * np.exp(
-                1j * (np.pi / 180.0) * self.phase[0] + 1j * 2 * np.pi * t * self.freq[0]
-            )
-            * np.exp(-pi * t * self.fwhmL[0])
-        )
-
-        for k in range(1, n_fre):
-            componentTimeDomainSignal[:, k] = (
-                self.area[k]
-                * np.exp(
-                    1j * (np.pi / 180.0) * self.phase[k]
-                    + 1j * 2 * np.pi * t * self.freq[k]
-                )
-                * np.exp(-(t**2) * 4 * np.log(2) * (self.fwhmG[k] ** 2))
-                * np.exp(-np.pi * t * self.fwhmL[k])
-            )
-
-        return componentTimeDomainSignal
-
-
-class NMR_Fit(NMR_Mix):
-
-    """Using NMR_Mix to fit FIDs to a series of exponentially decaying components"""
-
-    def __init__(
-        self,
-        time_signal,
-        t,
-        area,
-        freq,
-        phase,
-        fwhm=[],
-        fwhmL=[],
-        fwhmG=[],
-        method="lorenzian",
-        line_boardening=0,
-        zeropad_size=[],
-    ):
-
-        NMR_Mix.__init__(
-            self,
-            area=area,
-            freq=freq,
-            fwhm=fwhm,
-            phase=phase,
-            fwhmL=fwhmL,
-            fwhmG=fwhmG,
-            method=method,
-        )
-
-        # self.ci_area = np.array([])
-        # self.ci_freq = np.array([])
-        # self.ci_fwhm = np.array([])
-        # self.ci_phase = np.array([])
-
-        self.sort_freq()
-
-        self.line_boardening = line_boardening
-        self.t = t
-        nPts = np.size(t)
-
-        if zeropad_size == []:
-            self.zeropad_size = nPts
-        else:
-            self.zeropad_size = zeropad_size
-
-        # apply line_boardening on the time domain signal
-        self.time_signal = np.multiply(
-            time_signal, np.exp(-np.pi * self.line_boardening * self.t)
-        )
-
-        self.dwell_time = self.t[1] - self.t[0]
-
-        self.spectral_signal = self.dwell_time * np.fft.fftshift(
-            np.fft.fft(self.time_signal, self.zeropad_size)
-        )
-
-        self.f = np.linspace(-0.5, 0.5, self.zeropad_size + 1) / self.dwell_time
-        self.f = self.f[:-1]  # take out last sample to have the right number of samples
-
     def sort_freq(self):
-        # sort components according to resonance frequency
+        """Sort components according to resonance frequency in descending order."""
         sort_index = np.argsort(-self.freq)
-
         self.freq = self.freq[sort_index]
         self.area = self.area[sort_index]
         self.phase = self.phase[sort_index]
@@ -170,46 +86,75 @@ class NMR_Fit(NMR_Mix):
         else:
             self.fwhm = self.fwhm[sort_index]
 
-        # if(self.ci_area>0):
-        #     self.ci_area = self.ci_area[sort_index]
-        #     self.ci_freq = self.ci_freq[sort_index]
-        #     self.ci_fwhm = self.ci_fwhm[sort_index]
-        #     self.ci_phase = self.ci_phase[sort_index]
-
-    def reset_components(self, area, freq, phase, fwhm=[], fwhmL=[], fwhmG=[]):
+    def set_components(
+        self,
+        area: np.ndarray,
+        freq: np.ndarray,
+        phase: np.ndarray,
+        fwhm: np.ndarray = np.array([]),
+        fwhmL: np.ndarray = np.array([]),
+        fwhmG: np.ndarray = np.array([]),
+    ):
+        """Set components and sort frequencies in descending order."""
         self.area = np.array([area]).flatten()
         self.freq = np.array([freq]).flatten()
         self.fwhm = np.array([fwhm]).flatten()
         self.phase = np.array([phase]).flatten()
-
         self.fwhmG = np.array([fwhmG]).flatten()
         self.fwhmL = np.array([fwhmL]).flatten()
-
         self.sort_freq()
 
 
-class NMR_TimeFit(NMR_Fit):
+class NMR_TimeFit(NMR_Mix):
+    """Class to fit time domain FIDs to a series of exponentially decaying components.
 
-    """Using NMR_Mix to fit time domain FIDs to a series of exponentially decaying components"""
+    Attributes:
+        ydata (np.ndarray): Time domain data.
+        tdata (np.ndarray): Time points in seconds.
+        area (np.ndarray): Area of each component.
+        freq (np.ndarray): Resonance frequency of each component.
+        phase (np.ndarray): Phase of each component.
+        fwhm (np.ndarray): FWHM of each component.
+        fwhmL (np.ndarray): Lorentzian FWHM of each component.
+        fwhmG (np.ndarray): Gaussian FWHM of each component.
+        method (str): Method for fitting, either "voigt" or "lorentzian".
+        line_broadening (float): Line broadening in Hz.
+        zeropad_size (Optional[int]): Zero padding size.
+        dwell_time (float): Dwell time in seconds.
+        spectral_signal (np.ndarray): Spectral signal.
+        f (np.ndarray): Frequency points in Hz.
+    """
 
     def __init__(
         self,
-        time_signal,
-        t,
-        area,
-        freq,
-        phase,
-        fwhm=[],
-        fwhmL=[],
-        fwhmG=[],
-        method="lorenzian",
-        line_boardening=0,
-        zeropad_size=[],
+        ydata: np.ndarray,
+        tdata: np.ndarray,
+        area: np.ndarray,
+        freq: np.ndarray,
+        phase: np.ndarray,
+        fwhm: np.ndarray = np.array([]),
+        fwhmL: np.ndarray = np.array([]),
+        fwhmG: np.ndarray = np.array([]),
+        method: str = "lorentzian",
+        line_broadening: float = 0,
+        zeropad_size: Optional[int] = None,
     ):
-        NMR_Fit.__init__(
-            self,
-            time_signal=time_signal,
-            t=t,
+        """Initialize NMR_TimeFit class.
+
+        Args:
+            ydata (np.ndarray): Time domain data.
+            tdata (np.ndarray): Time points in seconds.
+            area (np.ndarray): Area of each component.
+            freq (np.ndarray): Resonance frequency of each component.
+            phase (np.ndarray): Phase of each component.
+            fwhm (np.ndarray): FWHM of each component.
+            fwhmL (np.ndarray): Lorentzian FWHM of each component.
+            fwhmG (np.ndarray): Gaussian FWHM of each component.
+            method (str): Fitting method, either "voigt" or "lorentzian".
+            line_broadening (float): Line broadening in Hz.
+            zeropad_size (Optional[int]): Zero padding size.
+        """
+        super().__init__(
             area=area,
             freq=freq,
             fwhm=fwhm,
@@ -217,91 +162,56 @@ class NMR_TimeFit(NMR_Fit):
             fwhmG=fwhmG,
             method=method,
             phase=phase,
-            line_boardening=line_boardening,
-            zeropad_size=zeropad_size,
         )
-
-    def fit_time_signal(
-        self,
-        bounds=(-np.inf, np.inf),
-        plot_flag=0,
-        data_dir="",
-        flag_status="skip",
-        data_k0=[],
-    ):
-        fit_param = self.calc_time_fit(bounds)
-
-        # parsing the fitting results
-        fit_vec = np.multiply(
-            fit_param[0, :], np.exp(1j * np.pi * fit_param[-1, :] / 180.0)
-        )
-
-        fit_area = abs(fit_vec)
-        fit_freq = fit_param[1, :]
-        fit_phase = np.arctan2(np.imag(fit_vec), np.real(fit_vec)) * 180.0 / np.pi
-
-        if self.method == "voigt":
-            fit_fwhmL = fit_param[2, :]
-            fit_fwhmG = fit_param[3, :]
-
-            self.reset_components(
-                area=fit_area,
-                freq=fit_freq,
-                fwhmL=fit_fwhmL,
-                fwhmG=fit_fwhmG,
-                phase=fit_phase,
-            )
+        self.line_broadening = line_broadening
+        self.tdata = tdata
+        if not zeropad_size:
+            self.zeropad_size = np.size(tdata)
         else:
-            fit_fwhm = fit_param[2, :]
-
-            self.reset_components(
-                area=fit_area, freq=fit_freq, fwhm=fit_fwhm, phase=fit_phase
-            )
-        # plot time and spect fitting results
-        if plot_flag:
-            self.plot_time_spect_fit(
-                fit_param=fit_param,
-                data_dir=data_dir,
-                flag_status=flag_status,
-                data_k0=data_k0,
-            )
+            self.zeropad_size = zeropad_size
+        # apply line broadening on the time domain signal
+        self.ydata = np.multiply(
+            ydata, np.exp(-np.pi * self.line_broadening * self.tdata)
+        )
+        # calculate dwell time from delta tdata
+        self.dwell_time = self.tdata[1] - self.tdata[0]
+        self.spectral_signal = self.dwell_time * np.fft.fftshift(
+            np.fft.fft(self.ydata, self.zeropad_size)
+        )
+        self.f = np.linspace(-0.5, 0.5, self.zeropad_size + 1) / self.dwell_time
+        # take out last sample to have the right number of samples
+        self.f = self.f[:-1]
+        self.sort_freq()
 
     def calc_time_fit(self, bounds):
-        ## function fit the time domain signal using least square curve fitting running trust region reflection algorithm
+        """Fit the time domain signal using least square curve fitting.
 
-        # asign function to calculate residuals
-        fun = self.calc_residual_time_sig
-        # max_nfev = 13000
-        ftol = 1e-900
-        xtol = 1e-20
-
+        Running trust region reflection algorithm.
+        Args:
+            bounds (list): Bounds for the fitting parameters.
+        """
+        fun = self.get_residual_time_function
         if self.method == "voigt":
             x0 = np.array(
                 [self.area, self.freq, self.fwhmL, self.fwhmG, self.phase]
             ).flatten()
         else:
             x0 = np.array([self.area, self.freq, self.fwhm, self.phase]).flatten()
-
         # curve fitting using trust region reflection algorithm
         fit_result = least_squares(
             fun=fun,
             x0=x0,
-            jac="2-point",
+            jac="3-point",
             bounds=bounds,
-            method="dogbox",
-            xtol=xtol,
-            ftol=ftol,
+            method="lm",
+            ftol=1e-15,
+            xtol=1e-09,
         )
-
         # resolving the fitting results
         fit_param = fit_result["x"]
-
         n_fre = int(np.size(fit_param) / self.ncomp)
-
         fit_param = np.reshape(fit_param, (self.ncomp, n_fre))
-
         fit_freq = fit_param[1, :]
-
         # check for aliased frequency
         halfBW = 0.5 * (np.amax(self.f) - np.amin(self.f))
         alias_index = np.where(abs(fit_freq) > halfBW)
@@ -323,11 +233,9 @@ class NMR_TimeFit(NMR_Fit):
             fit_result = least_squares(
                 fun=fun,
                 x0=x0,
-                jac="2-point",
+                jac="3-point",
                 bounds=(-np.inf, np.inf),
-                method="dogbox",
-                xtol=xtol,
-                ftol=ftol,
+                method="trf",
             )
 
             fit_param = fit_result["x"].reshape([5, 3])
@@ -339,10 +247,13 @@ class NMR_TimeFit(NMR_Fit):
 
         return fit_param
 
-    def calc_residual_time_sig(self, x):
-        # used in fitting to allow constraints for complex fitting
-        # calculate the residual of fitting
-        # x is the fitting independent variables [area, freq, fwhm, phase]
+    def get_residual_time_function(self, x):
+        """Calculate the residual of fitting.
+
+        Args:
+            x (np.ndarray): Fitting parameters of shape [area, freq, fwhmL, fwhmG,
+             phase]
+        """
         if self.method == "voigt":
             x = np.reshape(x, (5, int(np.size(x) / 5)))
             tmpNMRMix = NMR_Mix(
@@ -360,43 +271,51 @@ class NMR_TimeFit(NMR_Fit):
                 freq=x[1, :],
                 fwhm=x[2, :],
                 phase=x[3, :],
-                method="lorenzian",
+                method="lorentzian",
             )
-
-        complex_fit_time = tmpNMRMix.calc_time_sig(self.t)
-
+        complex_fit_time = tmpNMRMix.get_time_function(self.tdata)
         fit_sig = np.array([np.real(complex_fit_time), np.imag(complex_fit_time)])
-
-        truth_sig = np.array([np.real(self.time_signal), np.imag(self.time_signal)])
-
-        residual = (truth_sig - fit_sig).flatten()
-
+        truth_sig = np.array([np.real(self.ydata), np.imag(self.ydata)])
+        # residual = (fitruth_sig - fit_sig).flatten()
+        residual = (fit_sig - truth_sig).flatten()
         return residual
 
-    def calc_residual_time_sig_final(self, x):
-        # return both residual and fitting signal (time domain)
+    def fit_time_signal(
+        self,
+        bounds: tuple = (-np.inf, np.inf),
+    ):
+        """Fit the time domain signal using least square curve fitting.
+
+        Also store the fitting results in the class.
+
+        Args:
+            bounds (tuple, optional): Bounds for the fitting parameters.
+                Defaults to (-np.inf, np.inf).
+        """
+        fit_param = self.calc_time_fit(bounds)
+        # parsing the fitting results
+        fit_vec = np.multiply(
+            fit_param[0, :], np.exp(1j * np.pi * fit_param[-1, :] / 180.0)
+        )
+        fit_area = abs(fit_vec)
+        fit_freq = fit_param[1, :]
+        fit_phase = np.arctan2(np.imag(fit_vec), np.real(fit_vec)) * 180.0 / np.pi
+
         if self.method == "voigt":
-            x = np.reshape(x, (5, int(np.size(x) / 5)))
-            tmpNMRMix = NMR_Mix(
-                area=x[0, :],
-                freq=x[1, :],
-                fwhmL=x[2, :],
-                fwhmG=x[3, :],
-                phase=x[4, :],
-                method="voigt",
+            fit_fwhmL = fit_param[2, :]
+            fit_fwhmG = fit_param[3, :]
+
+            self.set_components(
+                area=fit_area,
+                freq=fit_freq,
+                fwhmL=fit_fwhmL,
+                fwhmG=fit_fwhmG,
+                phase=fit_phase,
+            )
+        elif self.method == "lorentzian":
+            fit_fwhm = fit_param[2, :]
+            self.set_components(
+                area=fit_area, freq=fit_freq, fwhm=fit_fwhm, phase=fit_phase
             )
         else:
-            x = np.reshape(x, (4, int(np.size(x) / 4)))
-            tmpNMRMix = NMR_Mix(
-                area=x[0, :],
-                freq=x[1, :],
-                fwhm=x[2, :],
-                phase=x[3, :],
-                method="lorenzian",
-            )
-
-        complex_fit_time = tmpNMRMix.calc_time_sig(self.t)
-        fit_sig = np.array([np.real(complex_fit_time), np.imag(complex_fit_time)])
-        truth_sig = np.array([np.real(self.time_signal), np.imag(self.time_signal)])
-        residual = (fit_sig - truth_sig).flatten()
-        return residual, complex_fit_time
+            raise ValueError("Unknown fitting method.")

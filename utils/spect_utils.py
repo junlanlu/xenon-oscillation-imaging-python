@@ -46,10 +46,9 @@ def get_breathhold_indices(
         start_ind = [0]
     if np.size(end_ind) == 0:
         end_ind = [np.size(t)]
-
     return (
-        start_ind[np.ceil(np.size(start_ind) / 2)],
-        end_ind[np.ceil(np.size(end_ind) / 2)],
+        int(start_ind[int(np.floor(np.size(start_ind) / 2))]),
+        int(end_ind[int(np.floor(np.size(end_ind) / 2))]),
     )
 
 
@@ -99,9 +98,9 @@ def get_area_guess(data: Optional[np.ndarray], center_freq: float, rf_excitation
 
 def calculate_static_spectroscopy(
     fid: np.ndarray,
-    dwell_time: float,
-    tr: float,
-    center_freq: float,
+    dwell_time: float = 1.95e-05,
+    tr: float = 0.015,
+    center_freq: float = 34.09,
     rf_excitation: int = 218,
     n_avg: int = 50,
     method: str = "voigt",
@@ -109,12 +108,12 @@ def calculate_static_spectroscopy(
     """Fit static spectroscopy data to Voigt model extract RBC:M ratio.
 
     Args:
-        fid (np.ndarray): _description_
-        dwell_time (float): _description_
-        tr (float): _description_
-        center_freq (float): _description_
-        rf_excitation (int, optional): _description_. Defaults to 218.
-        n_avg (int, optional): _description_. Defaults to 50.
+        fid (np.ndarray): Dissolved phase FIDs in format (n_points, n_frames).
+        dwell_time (float): Dwell time in seconds.
+        tr (float): TR in seconds.
+        center_freq (float): Center frequency in MHz.
+        rf_excitation (int, optional): _description_. Excitation frequency in ppm.
+        n_avg (int, optional): Number of FIDs to average for static spectroscopy.
 
     Returns:
         _type_: _description_
@@ -123,11 +122,12 @@ def calculate_static_spectroscopy(
     t_tr = np.array(range(0, np.shape(fid)[1])) * tr
 
     start_ind, _ = get_breathhold_indices(t=t_tr, start_time=2, end_time=10)
-    data_dis_avg = np.average(fid[:, start_ind : start_ind + n_avg], axis=1)
-
+    start_ind = 200
+    end_ind = np.min([len(fid[0, :]) - 1, start_ind + n_avg + 1])
+    data_dis_avg = np.average(fid[:, start_ind:end_ind], axis=1)
     disFit = fit.NMR_TimeFit(
-        time_signal=data_dis_avg,
-        t=t,
+        ydata=data_dis_avg,
+        tdata=t,
         area=get_area_guess(
             data=None, center_freq=center_freq, rf_excitation=rf_excitation
         ),
@@ -136,8 +136,8 @@ def calculate_static_spectroscopy(
         ),
         fwhmL=np.array([8.8, 5.0, 1.2]) * center_freq,
         fwhmG=np.array([0, 6.1, 0]) * center_freq,
-        phase=[0, 0, 0],
-        line_boardening=0,
+        phase=np.array([0, 0, 0]),
+        line_broadening=0,
         zeropad_size=np.size(t),
         method=method,
     )
@@ -160,6 +160,6 @@ def calculate_static_spectroscopy(
         )
     ).flatten()
     bounds = (lb, ub)
-    disFit.fit_time_signal(bounds)
-    rbc_barrier_ratio = round(disFit.area[0] / np.sum(disFit.area[1]), 2)
-    return rbc_barrier_ratio
+    disFit.fit_time_signal(bounds=bounds)
+    rbc_m_ratio = disFit.area[0] / np.sum(disFit.area[1])
+    return rbc_m_ratio
