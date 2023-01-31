@@ -24,6 +24,7 @@ class Config(config_dict.ConfigDict):
         self.segmentation_key = constants.SegmentationKey.CNN_VENT.value
         self.site = constants.Site.DUKE.value
         self.subject_id = "test"
+        self.rbc_m_ratio = 0.0
 
 
 class Process(object):

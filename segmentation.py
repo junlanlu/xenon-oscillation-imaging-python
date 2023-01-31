@@ -9,15 +9,13 @@ import tensorflow as tf
 from absl import app, flags
 from scipy.ndimage import zoom
 
-from utils import constants, io
+from utils import constants, io_utils
 
 # define flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("image_type", "vent", "either ute or vent for segmentation")
-flags.DEFINE_string("nii_filename", "", "nii image file path")
-
-flags.mark_flag_as_required("nii_filename")
+flags.DEFINE_string("nii_filepath", "", "nii image file path")
 
 
 def predict(
@@ -45,14 +43,7 @@ def predict(
 
     # Setting Model Weight Directory
     if image_type == constants.ImageType.VENT.value:
-
-        from models.serialized_batch_vnet_Relu import vnet
-
-        model = vnet(input_size=(128, 128, 128, 1))
-        weights_dir_current = "./models/weights/model_ANATOMY_UTE.h5"
-    elif image_type == "vent":
-
-        from models.serialized_batch_vnet_Relu_model_batch import vnet
+        from models.model_vnet import vnet
 
         model = vnet(input_size=(128, 128, 128, 1))
         weights_dir_current = "./models/weights/model_ANATOMY_VEN.h5"
@@ -62,18 +53,7 @@ def predict(
     # Loading model weights, those are trained elsewhere
     model.load_weights(weights_dir_current)
 
-    if image_type == "ute":
-        img_thre = np.percentile(image, 99)
-        image = np.divide(image, img_thre)
-        image[image > 1] = 1
-        image = np.multiply(image, 255)
-
-        # this is used for sup 3D CNN
-        image = (image - 51.99475164450344) / (48.790268508069744)
-        image = image[None, ...]
-        image = image[..., None]
-
-    elif image_type == "vent":
+    if image_type == constants.ImageType.VENT.value:
         image = np.abs(image)
         image = 255 * (image - np.min(image)) / (np.max(image) - np.min(image))
 
@@ -95,11 +75,11 @@ def predict(
 
 def main(argv):
     """Run CNN model inference on ute or vent image."""
-    image = io.import_nii(FLAGS.nii_filename)
+    image = io_utils.import_nii(FLAGS.nii_filepath)
     image_type = FLAGS.image_type
     mask = predict(image, image_type)
-    export_path = os.path.join(os.path.dirname(FLAGS.nii_filename), "mask.nii")
-    io.export_nii(image=mask.astype("float64"), path=export_path)
+    export_path = os.path.join(os.path.dirname(FLAGS.nii_filepath), "mask.nii")
+    io_utils.export_nii(image=mask.astype("float64"), path=export_path)
 
 
 if __name__ == "__main__":
