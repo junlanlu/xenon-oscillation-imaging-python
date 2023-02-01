@@ -25,7 +25,11 @@ class IOFields(object):
 
     BIASFIELD_KEY = "biasfield_key"
     DWELL_TIME = "dwell_time"
+    FA_DIS = "fa_dis"
+    FA_GAS = "fa_gas"
     FIDS_DIS = "fids_dis"
+    FIDS_GAS = "fids_gas"
+    FOV = "fov"
     FOV = "fov"
     FREQ_CENTER = "freq_center"
     FREQ_EXCITATION = "freq_excitation"
@@ -33,20 +37,27 @@ class IOFields(object):
     INFLATION = "inflation"
     MASK_REG_NII = "mask_reg_nii"
     NPTS = "npts"
+    ORIENTATION = "orientation"
     OUTPUT_PATH = "output_path"
     PIXEL_SIZE = "pixel_size"
     PROCESS_DATE = "process_date"
+    PROTOCOL_NAME = "protocol_name"
     PROTON_DICOM_DIR = "proton_dicom_dir"
     PROTON_REG_NII = "proton_reg_nii"
+    RAMP_TIME = "ramp_time"
     RAW_PROTON_MONTAGE = "raw_proton_montage"
     REGISTRATION_KEY = "registration_key"
+    REMOVEOS = "removeos"
     SCAN_DATE = "scan_date"
     SCAN_TYPE = "scan_type"
     SEGMENTATION_KEY = "segmentation_key"
     SITE = "site"
     SLICE_THICKNESS = "slice_thickness"
+    SOFTWARE_VERSION = "software_version"
     SUBJECT_ID = "subject_id"
+    TE90 = "te90"
     TR = "tr"
+    TR_DIS = "tr_dis"
     VEN_COR_MONTAGE = "bias_cor_ven_montage"
     VEN_CV = "ven_cv"
     VEN_DEFECT = "ven_defect"
@@ -124,6 +135,24 @@ class Platform(enum.Enum):
     """Scanner platform."""
 
     SIEMENS = "siemens"
+
+
+class TrajType(object):
+    """Trajectory type."""
+
+    SPIRAL = "spiral"
+    HALTON = "halton"
+    SPIRALRANDOM = "spiralrandom"
+    ARCHIMEDIAN = "archimedian"
+    GOLDENMEAN = "goldenmean"
+
+
+class Orientation(object):
+    """Image orientation."""
+
+    CORONAL = "coronal"
+    AXIAL = "axial"
+    TRANSVERSE = "transverse"
 
 
 class STATSIOFields(object):

@@ -16,7 +16,7 @@ class Config(config_dict.ConfigDict):
         """Initialize config parameters."""
         super().__init__()
         self.data_dir = ""
-        self.manual_seg_filepath = ""
+        self.filepath_twix_dyn = ""
         self.processes = Process()
         self.recon = Recon()
         self.platform = constants.Platform

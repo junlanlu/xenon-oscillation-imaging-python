@@ -1,3 +1,4 @@
+import logging
 import pdb
 
 import constants
@@ -5,10 +6,13 @@ import io_utils
 import spect_utils
 from absl import app
 
-# twix_path = "/mnt/c/Users/DEEPXENON2/Desktop/Patients/007-02-003/007-02-003_s1/meas_MID00052_FID31022_fid_xe_calibration_2108__67.dat"
+twix_path = "/mnt/c/Users/DEEPXENON2/Desktop/Patients/007-02-003/007-02-003_s1/meas_MID00052_FID31022_fid_xe_calibration_2108__67.dat"
+# twix_path = (
+#     "/mnt/d/Patients/007-028B/meas_MID00231_FID13652_fid_xe_calibration_2108__67.dat"
+# )
 # twix_path = "/Users/junlanlu/Desktop/Patients/102007/meas_MID00174_FID05543_fid_xe_calibration_2108__67.dat"
 # twix_path = "/Users/junlanlu/Desktop/Patients/test/meas_MID00209_FID04031_fid_xe_calibration_2108__67.dat"
-twix_path = "/Users/junlanlu/Desktop/Patients/LH-011A/meas_MID00209_FID04031_fid_xe_calibration_2108__67.dat"
+# twix_path = "/Users/junlanlu/Desktop/Patients/LH-011A/meas_MID00209_FID04031_fid_xe_calibration_2108__67.dat"
 
 
 def test_spec_utils(twix_path: str):
@@ -19,9 +23,9 @@ def test_spec_utils(twix_path: str):
         tr=out_dict[constants.IOFields.TR],
         center_freq=out_dict[constants.IOFields.FREQ_CENTER],
         rf_excitation=out_dict[constants.IOFields.FREQ_EXCITATION],
-        n_avg=50,
+        plot=False,
     )
-    print(rbc2m)
+    logging.info("RBC:M ratio: {}".format(rbc2m))
 
 
 def main(argv):

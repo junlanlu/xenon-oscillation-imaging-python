@@ -2,11 +2,13 @@
 import math
 import pdb
 import sys
+
+sys.path.append("..")
 from typing import Optional, Tuple
 
 import numpy as np
 
-from spect import nmrTimeFit as fit
+import spect.nmr_timefit as fit
 
 
 def get_breathhold_indices(
@@ -68,9 +70,9 @@ def get_frequency_guess(
         membrane, and gas frequencys in MHz
     """
     if rf_excitation == 208:
-        return np.array([0, -20.7, -218.4]) * center_freq
-    elif rf_excitation == 218:
         return np.array([10, -21.7, -208.4]) * center_freq
+    elif rf_excitation == 218:
+        return np.array([0, -21.7, -218.0]) * center_freq
     else:
         raise ValueError("Invalid excitation frequency {}".format(rf_excitation))
 
@@ -102,11 +104,15 @@ def calculate_static_spectroscopy(
     tr: float = 0.015,
     center_freq: float = 34.09,
     rf_excitation: int = 218,
-    n_avg: int = 50,
+    n_avg: Optional[int] = None,
+    n_avg_seconds: int = 1,
     method: str = "voigt",
+    plot: bool = False,
 ):
-    """Fit static spectroscopy data to Voigt model extract RBC:M ratio.
+    """Fit static spectroscopy data to Voigt model and extract RBC:M ratio.
 
+    The RBC:M ratio is defined as the ratio of the fitted RBC peak area to the membrane
+    peak area.
     Args:
         fid (np.ndarray): Dissolved phase FIDs in format (n_points, n_frames).
         dwell_time (float): Dwell time in seconds.
@@ -114,15 +120,24 @@ def calculate_static_spectroscopy(
         center_freq (float): Center frequency in MHz.
         rf_excitation (int, optional): _description_. Excitation frequency in ppm.
         n_avg (int, optional): Number of FIDs to average for static spectroscopy.
+        n_avg_seconds (int): Number of seconds to average for
+            static spectroscopy.
+        plot (bool, optional): Plot the fit. Defaults to False.
 
     Returns:
-        _type_: _description_
+        RBC:M ratio
     """
     t = np.array(range(0, np.shape(fid)[0])) * dwell_time
     t_tr = np.array(range(0, np.shape(fid)[1])) * tr
 
     start_ind, _ = get_breathhold_indices(t=t_tr, start_time=2, end_time=10)
-    start_ind = 200
+
+    # calculate number of FIDs to average
+    if n_avg:
+        n_avg = n_avg
+    else:
+        n_avg = int(n_avg_seconds / tr)
+
     end_ind = np.min([len(fid[0, :]) - 1, start_ind + n_avg + 1])
     data_dis_avg = np.average(fid[:, start_ind:end_ind], axis=1)
     disFit = fit.NMR_TimeFit(
@@ -134,7 +149,7 @@ def calculate_static_spectroscopy(
         freq=get_frequency_guess(
             data=None, center_freq=center_freq, rf_excitation=rf_excitation
         ),
-        fwhmL=np.array([8.8, 5.0, 1.2]) * center_freq,
+        fwhmL=np.array([8.8, 5.0, 2.0]) * center_freq,
         fwhmG=np.array([0, 6.1, 0]) * center_freq,
         phase=np.array([0, 0, 0]),
         line_broadening=0,
@@ -160,6 +175,8 @@ def calculate_static_spectroscopy(
         )
     ).flatten()
     bounds = (lb, ub)
-    disFit.fit_time_signal(bounds=bounds)
+    disFit.fit_time_signal_residual(bounds=bounds)
+    if plot:
+        disFit.plot_time_spect_fit()
     rbc_m_ratio = disFit.area[0] / np.sum(disFit.area[1])
     return rbc_m_ratio

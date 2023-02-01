@@ -20,8 +20,9 @@ def oscillation_mapping_reconstruction(config: config_dict.ConfigDict):
     """
     subject = Subject(config=config)
     # read in dicom files
-    logging.info("1. Reading in files")
-    subject.readinfiles()
+    subject.read_files()
+    logging.info("2. Getting RBC:M ratio from static spectroscopy.")
+    subject.calculate_static_spectroscopy()
     logging.info("2. Reconstructing images")
     subject.reconstruction()
     logging.info("3. Segmenting Proton Mask")

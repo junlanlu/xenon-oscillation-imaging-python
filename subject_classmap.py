@@ -11,13 +11,14 @@ import scipy.io as sio
 from ml_collections import config_dict
 
 import segmentation
-from utils import binning, constants, img_utils, io_utils, metrics
+from utils import binning, constants, img_utils, io_utils, metrics, spect_utils
 
 
 class Subject(object):
     """Module to for processing oscillation imaging.
 
     Attributes:
+        config (config_dict.ConfigDict): config dict
 
     """
 
@@ -25,25 +26,48 @@ class Subject(object):
         """Init object."""
         logging.info("Initializing oscillation imaging subject.")
         self.config = config
-        self.rbc_m_ratio = 0.0
         self.gas_highSNR = np.array([0.0])
-        self.segmentation_key = str(config.segmentation_key)
         self.manual_segmentation_filepath = str(config.manual_seg_filepath)
+        self.rbc_m_ratio = 0.0
+        self.segmentation_key = str(config.segmentation_key)
+        self.dict_dyn = {}
+        self.dict_dis = {}
+
+    def read_files(self):
+        """Read in files.
+
+        Read in the dynamic spectroscopy (if it exists) and the dissolved-phase image
+        data. Currently only supports twix files but will be extended to support
+        other files.
+        """
+        self.dict_dyn = io_utils.read_dyn_twix(str(self.config.filepath_twix_dyn))
+        self.dict_dis = io_utils.read_dis_twix(str(self.config.filepath_twix_dis))
 
     def calculate_static_spectroscopy(self):
-        """Calculate static spectroscopy to derive the RBC:M ratio."""
+        """Calculate static spectroscopy to derive the RBC:M ratio.
+
+        If a manual RBC:M ratio is specified, use that instead.
+        """
         if self.config.rbc_m_ratio > 0:  # type: ignore
             self.rbc_m_ratio = float(self.config.rbc_m_ratio)  # type: ignore
             logging.info("Using manual RBC:M ratio of {}".format(self.rbc_m_ratio))
         else:
             logging.info("Calculating RBC:M ratio from static spectroscopy.")
-            rbc_m_ratio = 0
+            self.rbc_m_ratio = spect_utils.calculate_static_spectroscopy(
+                fid=self.dict_dyn[constants.IOFields.FIDS_DIS],
+                dwell_time=self.dict_dyn[constants.IOFields.DWELL_TIME],
+                tr=self.dict_dyn[constants.IOFields.TR],
+                center_freq=self.dict_dyn[constants.IOFields.FREQ_CENTER],
+                rf_excitation=self.dict_dyn[constants.IOFields.FREQ_EXCITATION],
+                plot=False,
+            )
 
     def readMatFile(self):
         """Read in Mat files."""
         return
 
     def reconstruction(self):
+
         return
 
     def segmentation(self):
