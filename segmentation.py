@@ -9,6 +9,7 @@ import tensorflow as tf
 from absl import app, flags
 from scipy.ndimage import zoom
 
+from models.model_vnet import vnet
 from utils import constants, io_utils
 
 # define flags
@@ -29,10 +30,9 @@ def predict(
     Returns:
         mask: np.ndarray of type bool of the output mask.
     """
-    # Shape of the Image
+    # Get shape of the image
     img_h, img_w, _ = np.shape(image)
-
-    # Dealing with different image shape
+    # Reshaping image for segmentation
     if img_h == 64 and img_w == 64:
         print("Reshaping image for segmentation")
         image = zoom(abs(image), [2, 2, 2])
@@ -41,16 +41,13 @@ def predict(
     else:
         raise ValueError("Segmentation Image size should be 128 x 128 x n")
 
-    # Setting Model Weight Directory
     if image_type == constants.ImageType.VENT.value:
-        from models.model_vnet import vnet
-
         model = vnet(input_size=(128, 128, 128, 1))
         weights_dir_current = "./models/weights/model_ANATOMY_VEN.h5"
     else:
         raise ValueError("image_type must be ute or vent")
 
-    # Loading model weights, those are trained elsewhere
+    # Load model weights
     model.load_weights(weights_dir_current)
 
     if image_type == constants.ImageType.VENT.value:

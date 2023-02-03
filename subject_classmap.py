@@ -10,8 +10,18 @@ import numpy as np
 import scipy.io as sio
 from ml_collections import config_dict
 
+import preprocessing
+import reconstruction
 import segmentation
-from utils import binning, constants, img_utils, io_utils, metrics, spect_utils
+from utils import (
+    binning,
+    constants,
+    img_utils,
+    io_utils,
+    metrics,
+    recon_utils,
+    spect_utils,
+)
 
 
 class Subject(object):
@@ -32,6 +42,14 @@ class Subject(object):
         self.segmentation_key = str(config.segmentation_key)
         self.dict_dyn = {}
         self.dict_dis = {}
+        self.data_dis = np.array([])
+        self.data_gas = np.array([])
+        self.traj_dis = np.array([])
+        self.traj_dis_high = np.array([])
+        self.traj_dis_low = np.array([])
+        self.data_dis_high = np.array([])
+        self.data_dis_low = np.array([])
+        self.traj_gas = np.array([])
 
     def read_files(self):
         """Read in files.
@@ -66,13 +84,23 @@ class Subject(object):
         """Read in Mat files."""
         return
 
-    def reconstruction(self):
+    def preprocess(self):
+        """Prepare data and trajectory for reconstruction."""
+        (
+            self.data_dis,
+            self.traj_dis,
+            self.data_gas,
+            self.traj_gas,
+        ) = preprocessing.prepare_data_and_traj(self.dict_dyn)
 
-        return
+    def reconstruction(self):
+        """Reconstruct the oscillation image."""
+        self.image_gas = reconstruction.reconstruct(
+            data=self.data_gas, traj=self.traj_gas
+        )
 
     def segmentation(self):
         """Segment the thoracic cavity."""
-
         if self.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
             logging.info("Performing neural network segmenation.")
             self.mask_reg = segmentation.predict(self.gas_highSNR)
@@ -101,17 +129,7 @@ class Subject(object):
 
     def oscillation_binning(self):
         """Bin oscillation image to colormap bins."""
-        bin_threshold = constants.REFERENCESTATS.REF_BINS_VEN_GRE
-        (
-            self.ventilation,
-            self.ventilation_binning,
-            self.mask_reg_vent,
-        ) = binning.gasBinning(
-            image=abs(self.ventilation_cor),
-            bin_threshold=bin_threshold,
-            mask=self.mask_reg,
-            percentile=constants._VEN_PERCENTILE_RESCALE,
-        )
+        return
 
     def generate_statistics(self):
         """Calculate ventilation image statistics."""
@@ -127,13 +145,8 @@ class Subject(object):
 
     def saveMat(self):
         """Save the instance variables into a mat file."""
-        sio.savemat(os.path.join(self.data_dir, self.subject_id + ".mat"), vars(self))
+        return
 
     def savefiles(self):
         """Save select images to nifti files and instance variable to mat."""
-        pathOutputcombinedmask = os.path.join(
-            self.data_dir, constants.OutputPaths.GRE_MASK_NII
-        )
-
-        io_utils.export_nii(self.mask_reg, pathOutputcombinedmask)
-        self.saveMat()
+        return

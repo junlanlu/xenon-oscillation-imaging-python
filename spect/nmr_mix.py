@@ -1,4 +1,4 @@
-"""NMR time fit class."""
+"""NMR mix class."""
 import pdb
 
 import numpy as np

@@ -1,3 +1,7 @@
+"""Test io_utils.py.
+
+User must specify the path to the twix file.
+"""
 import pdb
 
 import io_utils
@@ -20,6 +24,7 @@ def test_read_dyn_twix(twix_path: str):
         twix_path: path to twix file.
     """
     out_dict = io_utils.read_dyn_twix(twix_path)
+    pdb.set_trace()
 
 
 def test_read_dis_twix(twix_path: str):

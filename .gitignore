@@ -76,16 +76,6 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
 # Flask stuff:
 instance/
 .webassets-cache
@@ -158,7 +148,6 @@ z_connection_lost.txt
 
 #vs code
 .vs/*
-test.jpg
 
 # dll
 *.dll
@@ -167,4 +156,6 @@ test.jpg
 option/*.json
 config/*.py
 !config/base_config.py
-report_introduction.html
+
+# Keep the assets folder
+!assets/*

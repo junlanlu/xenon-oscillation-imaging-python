@@ -1,6 +1,9 @@
 # supposed to be a replicate of sparse_gridding_distance.py
+import ctypes as ct
 import math
+import os
 import pdb
+import platform
 import sys
 
 import numpy as np
@@ -196,3 +199,73 @@ def sparse_gridding_distance(
     #             nonsparse_sample_indices[p], nonsparse_distances[p*ndims]))
 
     return nonsparse_sample_indices + nonsparse_voxel_indices + nonsparse_distances
+
+
+def sparse_gridding_c(traj, kernel_para, matrix_size, force_dim):
+
+    # wrap up c function:
+    # void sparse_gridding_distance(double *coords, double kernel_width,
+    #       unsigned int npts, unsigned int ndims,
+    #       unsigned int *output_dims,
+    #       unsigned int *n_nonsparse_entries,
+    #       unsigned int max_size,
+    #       int force_dim)
+
+    lib_path = os.path.join(os.path.dirname(__file__), "..", "bin", "libsparse.so")
+    _sparse = ct.CDLL(lib_path)
+    _sparse.sparse_gridding_distance.argtypes = (
+        ct.POINTER(ct.c_double),
+        ct.c_double,
+        ct.c_uint,
+        ct.c_uint,
+        ct.POINTER(ct.c_uint),
+        ct.POINTER(ct.c_uint),
+        ct.c_uint,
+        ct.c_int,
+    )
+    npts, ndim = np.shape(traj)
+    # flatten traj to a list for input
+    traj = traj.flatten().tolist()
+    kernel_para = kernel_para
+    matrix_size = matrix_size.astype(int).flatten().tolist()
+
+    num_coord = len(traj)
+    num_matrixsize = len(matrix_size)
+
+    # calculate max size of the output indices
+    max_nNeighbors = 1
+    for dim in range(0, ndim):
+        max_nNeighbors = int(max_nNeighbors * (kernel_para + 1))
+
+    max_size = npts * max_nNeighbors
+
+    # create empty output
+    nSparsePoints = [0] * 1
+
+    # define argument types
+    coord_type = ct.c_double * num_coord
+    outputsize_type = ct.c_uint * num_matrixsize
+    n_nonsparse_entries_type = ct.c_uint * 1
+
+    # set_result to return an array of numbers. This is deprecated.
+    # _sparse.sparse_gridding_distance.restype = ndpointer(
+    #     dtype=ct.c_double, shape=(max_size*3,))
+
+    _sparse.sparse_gridding_distance.restype = ct.POINTER(ct.c_double * (max_size * 3))
+    result = _sparse.sparse_gridding_distance(
+        coord_type(*traj),
+        ct.c_double(kernel_para),
+        ct.c_uint(npts),
+        ct.c_uint(ndim),
+        outputsize_type(*matrix_size),
+        n_nonsparse_entries_type(*nSparsePoints),
+        ct.c_uint(max_size),
+        ct.c_int(force_dim),
+    )
+    # convert pointer to np array
+    result = np.asarray(np.ctypeslib.as_array(result.contents, shape=(max_size * 3,)))
+    sample_indices = result[:max_size]
+    voxel_indices = result[max_size : 2 * max_size]
+    distances = result[2 * max_size : 3 * max_size]
+
+    return sample_indices, voxel_indices, distances

@@ -10,9 +10,10 @@ class Kernel(ABC):
     """Gridding kernel abstract class.
 
     Attributes:
-        verbosity (bool): Log output messages
+        verbosity (bool): Log output messages.
         extent (float): kernel extent. The nonzero range of the kernel in units
             of pre-overgridded k-space voxels.
+        unique_string (str): Unique string defining object.
     """
 
     def __init__(self, kernel_extent: float, verbosity: bool = True):
@@ -28,7 +29,7 @@ class Kernel(ABC):
         self.unique_string = "Kernel_e" + str(self.extent)
 
     @abstractmethod
-    def evaluate(self, distances: np.ndarray):
+    def evaluate(self, distances: np.ndarray) -> np.ndarray:
         """Evaluate kernel function."""
         pass
 

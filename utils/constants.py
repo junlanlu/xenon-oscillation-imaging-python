@@ -71,6 +71,12 @@ class IOFields(object):
     VEN_SNR = "ven_snr"
     VEN_STD = "ven_std"
     VENT_DICOM_DIR = "vent_dicom_dir"
+    GRAD_DELAY_X = "grad_delay_x"
+    GRAD_DELAY_Y = "grad_delay_y"
+    GRAD_DELAY_Z = "grad_delay_z"
+    N_SKIP_START = "n_skip_start"
+    N_SKIP_END = "n_skip_end"
+    N_FRAMES = "n_frames"
 
 
 class OutputPaths(object):
@@ -153,6 +159,13 @@ class Orientation(object):
     CORONAL = "coronal"
     AXIAL = "axial"
     TRANSVERSE = "transverse"
+
+
+class DCFSpace(object):
+    """Defines the DCF space."""
+
+    GRIDSPACE = "gridspace"
+    DATASPACE = "dataspace"
 
 
 class STATSIOFields(object):

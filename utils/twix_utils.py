@@ -5,6 +5,8 @@ import pdb
 import sys
 
 sys.path.append("..")
+import datetime
+from typing import Any, Dict
 
 import mapvbvd
 import numpy as np
@@ -12,7 +14,7 @@ import numpy as np
 from utils import constants
 
 
-def get_scan_date(twix_obj: mapvbvd._attrdict) -> str:
+def get_scan_date(twix_obj: mapvbvd._attrdict.AttrDict) -> str:
     """Get the scan date in MM-DD-YYYY format.
 
     Args:
@@ -25,7 +27,7 @@ def get_scan_date(twix_obj: mapvbvd._attrdict) -> str:
     return scan_date[:4] + "-" + scan_date[4:6] + "-" + scan_date[6:]
 
 
-def get_dwell_time(twix_obj: mapvbvd._attrdict) -> float:
+def get_dwell_time(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the dwell time in seconds.
 
     Args:
@@ -33,10 +35,18 @@ def get_dwell_time(twix_obj: mapvbvd._attrdict) -> float:
     Returns:
         dwell time in seconds
     """
-    return twix_obj.hdr.Phoenix[("sRXSPEC", "alDwellTime", "0")] * 1e-9
+    try:
+        return float(twix_obj.hdr.Phoenix[("sRXSPEC", "alDwellTime", "0")]) * 1e-9
+    except:
+        pass
+    try:
+        return float(twix_obj.hdr.Meas.alDwellTime.split(" ")[0]) * 1e-9
+    except:
+        pass
+    raise ValueError("Could not find dwell time from twix object")
 
 
-def get_TR(twix_obj: mapvbvd._attrdict) -> float:
+def get_TR(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the TR in seconds.
 
     Args:
@@ -57,7 +67,7 @@ def get_TR(twix_obj: mapvbvd._attrdict) -> float:
     raise ValueError("Could not find TR from twix object")
 
 
-def get_TR_dissolved(twix_obj: mapvbvd._attrdict) -> float:
+def get_TR_dissolved(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the TR in seconds for dissolved phase.
 
     The dissolved phase TR is defined to be the time between two consecutive dissolved
@@ -81,7 +91,7 @@ def get_TR_dissolved(twix_obj: mapvbvd._attrdict) -> float:
     raise ValueError("Could not find TR from twix object")
 
 
-def get_center_freq(twix_obj: mapvbvd._attrdict) -> float:
+def get_center_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the center frequency in MHz.
 
     See: https://mriquestions.com/center-frequency.html for definition of center freq.
@@ -104,7 +114,7 @@ def get_center_freq(twix_obj: mapvbvd._attrdict) -> float:
     raise ValueError("Could not find center frequency (MHz) from twix object")
 
 
-def get_excitation_freq(twix_obj: mapvbvd._attrdict) -> float:
+def get_excitation_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the excitation frequency in MHz.
 
     See: https://mriquestions.com/center-frequency.html for definition of center freq.
@@ -117,20 +127,28 @@ def get_excitation_freq(twix_obj: mapvbvd._attrdict) -> float:
     excitation = 0
     try:
         excitation = twix_obj.hdr.Phoenix["sWipMemBlock", "alFree", "4"]
+        return round(
+            excitation
+            / (constants._GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
+        )
     except:
         pass
     try:
         excitation = twix_obj.hdr.MeasYaps[("sWiPMemBlock", "adFree", "8")]
+        return round(
+            excitation
+            / (constants._GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
+        )
     except:
         logging.warning("Could not get excitation frequency from twix object.")
-        return 0
+
     return round(
         excitation
         / (constants._GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
     )
 
 
-def get_field_strength(twix_obj: mapvbvd._attrdict) -> float:
+def get_field_strength(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the magnetic field strength in Tesla.
 
     Args:
@@ -146,7 +164,7 @@ def get_field_strength(twix_obj: mapvbvd._attrdict) -> float:
     return mag_strength
 
 
-def get_ramp_time(twix_obj: mapvbvd._attrdict) -> float:
+def get_ramp_time(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the ramp time in micro-seconds.
 
     See: https://mriquestions.com/gradient-specifications.html
@@ -170,7 +188,7 @@ def get_ramp_time(twix_obj: mapvbvd._attrdict) -> float:
     return max(100, ramp_time) if ramp_time < 100 else ramp_time
 
 
-def get_flag_removeOS(twix_obj: mapvbvd._attrdict) -> bool:
+def get_flag_removeOS(twix_obj: mapvbvd._attrdict.AttrDict) -> bool:
     """Get the flag to remove oversampling.
 
     Returns false by default.
@@ -186,7 +204,7 @@ def get_flag_removeOS(twix_obj: mapvbvd._attrdict) -> bool:
         return False
 
 
-def get_software_version(twix_obj: mapvbvd._attrdict) -> str:
+def get_software_version(twix_obj: mapvbvd._attrdict.AttrDict) -> str:
     """Get the software version.
 
     Args:
@@ -202,7 +220,7 @@ def get_software_version(twix_obj: mapvbvd._attrdict) -> str:
     return "unknown"
 
 
-def get_FOV(twix_obj: mapvbvd._attrdict) -> float:
+def get_FOV(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the FOV in cm.
 
     Args:
@@ -218,7 +236,7 @@ def get_FOV(twix_obj: mapvbvd._attrdict) -> float:
     return 40.0
 
 
-def get_TE90(twix_obj: mapvbvd._attrdict) -> float:
+def get_TE90(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the TE90 in seconds.
 
     Args:
@@ -229,7 +247,7 @@ def get_TE90(twix_obj: mapvbvd._attrdict) -> float:
     return twix_obj.hdr.Phoenix[("alTE", "0")] * 1e-6
 
 
-def get_flipangle_dissolved(twix_obj: mapvbvd._attrdict) -> float:
+def get_flipangle_dissolved(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the dissolved phase flip angle in degrees.
 
     Args:
@@ -237,14 +255,18 @@ def get_flipangle_dissolved(twix_obj: mapvbvd._attrdict) -> float:
     Returns:
         flip angle in degrees
     """
-    try:
-        return float(twix_obj.hdr.MeasYaps[("sWipMemBlock", "adFree", "6")])
-    except:
-        pass
-    try:
-        return float(twix_obj.hdr.MeasYaps[("sWiPMemBlock", "adFree", "6")])
-    except:
-        pass
+    scan_date = get_scan_date(twix_obj=twix_obj)
+    YYYY, MM, DD = scan_date.split("-")
+    if datetime.datetime(int(YYYY), int(MM), int(DD)) < datetime.datetime(2020, 5, 30):
+        logging.info("Checking for flip angle in old format.")
+        try:
+            return float(twix_obj.hdr.MeasYaps[("sWipMemBlock", "adFree", "6")])
+        except:
+            pass
+        try:
+            return float(twix_obj.hdr.MeasYaps[("sWiPMemBlock", "adFree", "6")])
+        except:
+            pass
     try:
         return float(twix_obj.hdr.Meas["adFlipAngleDegree"].split(" ")[1])
     except:
@@ -260,7 +282,7 @@ def get_flipangle_dissolved(twix_obj: mapvbvd._attrdict) -> float:
     raise ValueError("Unable to find dissolved-phase flip angle in twix object.")
 
 
-def get_flipangle_gas(twix_obj: mapvbvd._attrdict) -> float:
+def get_flipangle_gas(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the gas phase flip angle in degrees.
 
     Args:
@@ -289,7 +311,7 @@ def get_flipangle_gas(twix_obj: mapvbvd._attrdict) -> float:
     return 0.5
 
 
-def get_orientation(twix_obj: mapvbvd._attrdict) -> str:
+def get_orientation(twix_obj: mapvbvd._attrdict.AttrDict) -> str:
     """Get the orientation of the image.
 
     Args:
@@ -305,7 +327,7 @@ def get_orientation(twix_obj: mapvbvd._attrdict) -> str:
     return orientation.lower() if orientation else constants.Orientation.CORONAL
 
 
-def get_protocol_name(twix_obj: mapvbvd._attrdict) -> str:
+def get_protocol_name(twix_obj: mapvbvd._attrdict.AttrDict) -> str:
     """Get the protocol name.
 
     Args:
@@ -320,7 +342,7 @@ def get_protocol_name(twix_obj: mapvbvd._attrdict) -> str:
 
 
 def get_dyn_dissolved_fids(
-    twix_obj: mapvbvd._attrdict, n_skip_end: int = 20
+    twix_obj: mapvbvd._attrdict.AttrDict, n_skip_end: int = 20
 ) -> np.ndarray:
     """Get the dissoled phase FIDS used for dyn. spectroscopy from twix object.
 
@@ -339,20 +361,64 @@ def get_dyn_dissolved_fids(
     return raw_fids[:, 0 : -(1 + n_skip_end)]
 
 
-def get_gx_dissolved_fids(twix_obj: mapvbvd._attrdict) -> np.ndarray:
-    """Get the dissoled phase FIDS from twix object.
+def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
+    """Get the dissolved phase and gas phase FIDs from twix object.
 
-    These are the unfiltered FIDs.
+    For reconstruction, we also need important information like the gradient delay,
+    number of fids in each phase, etc. Note, this cannot be trivially read from the
+    twix object, and need to hard code some values. For example, the gradient delay
+    is slightly different depending on the scanner.
     Args:
         twix_obj: twix object returned from mapVBVD function
-        n_skip_end: number of fids to skip from the end. Usually they are calibration
-            frames.
     Returns:
-        dissolved phase FIDs in shape (number of points in ray, number of projections).
+        a dictionary containing
+        1. dissolved phase FIDs in shape (number of projections,
+            number of points in ray).
+        2. gas phase FIDs in shape (number of projections, number of points in ray).
+        3. number of fids in each phase, used for trajectory calculation. Note:
+            this may not always be equal to the shape in 1 and 2.
+        4. number of FIDs to skip from the beginning. This may be due to a noise frame.
+        5. number of FIDs to skip from the end. This may be due to calibration.
+        6. gradient delay x in microseconds.
+        7. gradient delay y in microseconds.
+        8. gradient delay z in microseconds.
     """
     twix_obj.image.squeeze = True
     twix_obj.image.flagIgnoreSeg = True
     twix_obj.image.flagRemoveOS = False
-
-    raw_fids = twix_obj.image[""].astype(np.cdouble)
-    return raw_fids
+    raw_fids = np.transpose(twix_obj.image.unsorted().astype(np.cdouble))
+    flip_angle_dissolved = get_flipangle_dissolved(twix_obj)
+    if flip_angle_dissolved == 12:
+        if raw_fids.shape[0] == 4200:
+            logging.info("Reading in fast dixon data on Siemens Trio.")
+            data_gas = raw_fids[0::2, :]
+            data_dis = raw_fids[1::2, :]
+            n_frames = data_dis.shape[0]
+            n_skip_start = 0
+            n_skip_end = 0
+            grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
+        else:
+            raise ValueError("Cannot get data from 'fast' dixon twix object.")
+    elif flip_angle_dissolved == 20:
+        if raw_fids.shape[0] == 2030:
+            logging.info("Reading in 'normal' dixon data on Siemens Prisma.")
+            data_gas = raw_fids[:-30][0::2, :]
+            data_dis = raw_fids[:-30][1::2, :]
+            n_frames = data_dis.shape[0]
+            n_skip_start = 0
+            n_skip_end = 0
+            grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
+        else:
+            raise ValueError("Cannot get data from normal dixon twix object.")
+    else:
+        raise ValueError("Cannot get data from twix object.")
+    return {
+        constants.IOFields.FIDS_GAS: data_gas,
+        constants.IOFields.FIDS_DIS: data_dis,
+        constants.IOFields.N_FRAMES: n_frames,
+        constants.IOFields.N_SKIP_START: n_skip_start,
+        constants.IOFields.N_SKIP_END: n_skip_end,
+        constants.IOFields.GRAD_DELAY_X: grad_delay_x,
+        constants.IOFields.GRAD_DELAY_Y: grad_delay_y,
+        constants.IOFields.GRAD_DELAY_Z: grad_delay_z,
+    }

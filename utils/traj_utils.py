@@ -3,7 +3,7 @@ import logging
 import math
 import pdb
 import sys
-from typing import Callable
+from typing import Callable, Tuple
 
 sys.path.append("..")
 import numpy as np
@@ -271,10 +271,159 @@ def gen_traj(num_projPerFrame: int, traj_type: str) -> np.ndarray:
     return coordinates
 
 
+def generate_radial_1D_traj(
+    decay_time: float = 60,
+    dwell_time: float = 10,
+    grad_delay_time: float = 0,
+    n_points: int = 64,
+    plat_time: float = 2500,
+    ramp_time: float = 100,
+) -> np.ndarray:
+    """Generate 1D radial distance.
+
+    Generate 1d radial distance array based on the timing and the amplitude
+        and the gradient delay.
+
+    Args:
+        dwell_time (float): dwell time in us
+        grad_delay_time (float): gradient delay time in us
+        ramp_time (float): gradient ramp time in us
+        plat_time (float): plateau time in us
+        decay_time (float): decay time in us
+        n_points (int): number of points in radial projection
+
+    Returns:
+        np.ndarray: 1D radial distances
+    """
+    grad_delay_npts = grad_delay_time / dwell_time
+    ramp_npts = ramp_time / dwell_time
+    plat_npts = plat_time / dwell_time
+    decay_npts = decay_time / dwell_time
+    pts_vec = np.array(range(0, n_points))
+    # calculate sample number of each region boundary
+    ramp_start_pt = grad_delay_npts
+    plat_start_pt = ramp_start_pt + ramp_npts
+    decay_start_pt = plat_start_pt + plat_npts
+    decay_end_pt = decay_start_pt + decay_npts
+    # calculate binary mask for each region
+    in_ramp = (pts_vec >= ramp_start_pt) & (pts_vec < plat_start_pt)
+    in_plat = (pts_vec >= plat_start_pt) & (pts_vec < decay_start_pt)
+    in_decay = (pts_vec >= decay_start_pt) & (pts_vec < decay_end_pt)
+    # calculate times in each region
+    ramp_pts_vec = np.multiply((pts_vec - ramp_start_pt), in_ramp)
+    plat_pts_vec = np.multiply((pts_vec - plat_start_pt), in_plat)
+    decay_pts_vec = np.multiply((pts_vec - decay_start_pt), in_decay)
+    # calculate the gradient amplitude  over time(assume plateau is 1)
+    ramp_g = ramp_pts_vec / ramp_npts
+    plat_g = in_plat
+    decay_g = np.multiply((1.0 - decay_pts_vec / decay_npts), in_decay)
+    # calculate radial position (0.5)
+    ramp_dist = 0.5 * np.multiply(ramp_pts_vec, ramp_g)
+    plat_dist = 0.5 * ramp_npts * in_plat + np.multiply(plat_pts_vec, plat_g)
+    decay_dist = (0.5 * ramp_npts + plat_npts) * in_decay + np.multiply(
+        in_decay, np.multiply(decay_pts_vec * 0.5, (1.0 + decay_g))
+    )
+    radial_distance = (ramp_dist + plat_dist + decay_dist) / n_points
+    return radial_distance
+
+
+def generate_traj(
+    decay_time: float = 60,
+    del_x: float = 0,
+    del_y: float = 0,
+    del_z: float = 0,
+    dwell_time: float = 10,
+    n_frames: int = 1000,
+    n_points: int = 64,
+    plat_time: float = 2500,
+    ramp_time: float = 100,
+    traj_type: str = constants.TrajType.HALTON,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Generate and vectorize trajectory and data.
+
+    Combines the 1D radial distance and the 3D trajectory coordinates of the edges to
+        generate the full 3D trajectory coordinates.
+
+    Args:
+        dwell_time (float): dwell time in us
+        grad_delay_time (float): gradient delay time in us
+        ramp_time (float): gradient ramp time in us
+        plat_time (float): plateau time in us
+        decay_time (float): decay time in us
+        npts (int): number of points in radial projection
+        del_x (float): gradient delay in x-direction in us
+        del_y (float): gradient delay in y-direction in us
+        del_z (float): gradient delay in z-direction in us
+        nFrames (int): number of radial projections
+        traj_type (int): trajectory type
+            1: Spiral
+            2. Halton
+            3. Haltonized Spiral
+            4. ArchimedianSeq
+            5. Double Golden Mean
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: trajectory coodinates in the x, y,
+            and z directions.
+    """
+
+    radial_distance_x = generate_radial_1D_traj(
+        decay_time=decay_time,
+        dwell_time=dwell_time,
+        n_points=n_points,
+        grad_delay_time=del_x,
+        plat_time=plat_time,
+        ramp_time=ramp_time,
+    )
+    radial_distance_y = generate_radial_1D_traj(
+        decay_time=decay_time,
+        dwell_time=dwell_time,
+        n_points=n_points,
+        grad_delay_time=del_y,
+        plat_time=plat_time,
+        ramp_time=ramp_time,
+    )
+    radial_distance_z = generate_radial_1D_traj(
+        decay_time=decay_time,
+        dwell_time=dwell_time,
+        n_points=n_points,
+        grad_delay_time=del_z,
+        plat_time=plat_time,
+        ramp_time=ramp_time,
+    )
+
+    traj_angular = gen_traj(n_frames, traj_type)
+    x = traj_angular[:n_frames]
+    y = traj_angular[n_frames : 2 * n_frames]
+    z = traj_angular[2 * n_frames : 3 * n_frames]
+
+    x = np.array([radial_distance_x]).transpose().dot(np.array([x])).transpose()
+    y = np.array([radial_distance_y]).transpose().dot(np.array([y])).transpose()
+    z = np.array([radial_distance_z]).transpose().dot(np.array([z])).transpose()
+
+    return x, y, z
+
+
+def get_trajectory_scaling_factor(recon_size: float, n_points: float) -> float:
+    """Get the scaling factor for the trajectory.
+
+    The scaling factor is used to scale the trajectory to the reconstruction size.
+    Otherwise, the image will be too small or too large.
+
+    Args:
+        recon_size (int): target reconstructed image size in number of voxels in each
+            dimension.
+        n_points (int): Number of points on each radial projection.
+
+    Returns:
+        (float) The scaling factor.
+    """
+    return 0.5 * recon_size / n_points
+
+
 def main(argv):
     """Generate trajectories for the given number of projections and trajectory type."""
-    pdb.set_trace()
-    logging.info(gen_traj(FLAGS.n_proj, FLAGS.traj_type))
+    gen_traj(FLAGS.n_proj, FLAGS.traj_type)
 
 
 if __name__ == "__main__":

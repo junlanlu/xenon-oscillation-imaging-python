@@ -13,6 +13,7 @@ import mapvbvd
 import matplotlib
 import nibabel as nib
 import numpy as np
+import scipy.io as sio
 
 from utils import constants, twix_utils
 
@@ -24,6 +25,15 @@ def import_nii(path: str) -> np.ndarray:
         path: str file path of nifti file
     """
     return nib.load(path).get_fdata()
+
+
+def import_mat(path: str) -> Dict[str, Any]:
+    """Import  matlab file as dictionary.
+
+    Args:
+        path: str file path of matlab file
+    """
+    return sio.loadmat(path)
 
 
 def read_dyn_twix(path: str) -> Dict[str, Any]:
@@ -89,12 +99,14 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
     twix_obj.image.flagIgnoreSeg = True
     twix_obj.image.flagRemoveOS = False
 
+    data_dict = twix_utils.get_gx_data(twix_obj=twix_obj)
+
     return {
         constants.IOFields.DWELL_TIME: twix_utils.get_dwell_time(twix_obj),
         constants.IOFields.FA_DIS: twix_utils.get_flipangle_dissolved(twix_obj),
         constants.IOFields.FA_GAS: twix_utils.get_flipangle_gas(twix_obj),
-        # constants.IOFields.FIDS_DIS: twix_utils.get_gx_dissolved_fids(twix_obj),
-        # constants.IOFields.FIDS_GAS: twix_utils.get_gx_gas_fids(twix_obj),
+        constants.IOFields.FIDS_DIS: data_dict[constants.IOFields.FIDS_DIS],
+        constants.IOFields.FIDS_GAS: data_dict[constants.IOFields.FIDS_GAS],
         constants.IOFields.FOV: twix_utils.get_FOV(twix_obj),
         constants.IOFields.FREQ_CENTER: twix_utils.get_center_freq(twix_obj),
         constants.IOFields.FREQ_EXCITATION: twix_utils.get_excitation_freq(twix_obj),
@@ -106,6 +118,12 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
         constants.IOFields.SOFTWARE_VERSION: twix_utils.get_software_version(twix_obj),
         constants.IOFields.TE90: twix_utils.get_TE90(twix_obj),
         constants.IOFields.TR: twix_utils.get_TR(twix_obj),
+        constants.IOFields.N_FRAMES: data_dict[constants.IOFields.N_FRAMES],
+        constants.IOFields.N_SKIP_START: data_dict[constants.IOFields.N_SKIP_START],
+        constants.IOFields.N_SKIP_END: data_dict[constants.IOFields.N_SKIP_END],
+        constants.IOFields.GRAD_DELAY_X: data_dict[constants.IOFields.GRAD_DELAY_X],
+        constants.IOFields.GRAD_DELAY_Y: data_dict[constants.IOFields.GRAD_DELAY_Y],
+        constants.IOFields.GRAD_DELAY_Z: data_dict[constants.IOFields.GRAD_DELAY_Z],
     }
 
 
