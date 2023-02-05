@@ -1,4 +1,3 @@
-import logging
 import pdb
 
 import numpy as np
@@ -6,11 +5,13 @@ from absl import app
 
 import preprocessing
 import reconstruction
-from utils import io_utils
+from utils import img_utils, io_utils, recon_utils, traj_utils
 
 twix_path = (
     "/mnt/d/Patients/007-028B/meas_MID00232_FID13653_xe_radial_Dixon_cor_2105_670.dat"
 )
+
+RECON_IMAGE_SIZE = 128
 
 
 def test_reconstruction(twix_path: str):
@@ -21,13 +22,17 @@ def test_reconstruction(twix_path: str):
         data_gas,
         traj_gas,
     ) = preprocessing.prepare_data_and_traj(out_dict)
+    data_gas, traj_gas = preprocessing.truncate_data_and_traj(data_gas, traj_gas)
     pdb.set_trace()
     image_gas = reconstruction.reconstruct(
-        data=data_gas.reshape((data_gas.shape[0] * data_gas.shape[1], 1)),
-        traj=traj_gas.reshape((np.prod(traj_gas.shape[0:2]), 3)),
+        data=recon_utils.flatten_data(data_gas),
+        traj=traj_utils.get_scaling_factor(RECON_IMAGE_SIZE, data_gas.shape[1])
+        * recon_utils.flatten_traj(traj_gas),
+        kernel_sharpness=0.14,
+        image_size=RECON_IMAGE_SIZE,
     )
+    image_gas = img_utils.flip_and_rotate_image(image_gas)
     io_utils.export_nii(np.abs(image_gas), "tmp/test_reconstruction.nii")
-    pdb.set_trace()
 
 
 def main(argv):

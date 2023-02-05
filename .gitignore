@@ -25,11 +25,9 @@ test.jpg
 **.gz
 **.h5
 **.mat
-# Your Experiment Files #
-#############################
-recon_dixon_duke.py
-recon_dixon_duke2.py
-ute_recon_exp.py
+# tmp files
+tmp/*
+!tmp/.gitkeep
 
 # Distribution / packaging
 .Python

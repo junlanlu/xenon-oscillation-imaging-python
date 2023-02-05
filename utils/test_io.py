@@ -38,7 +38,7 @@ def test_read_dis_twix(twix_path: str):
 
 
 def main(argv):
-    """Test reading in twix file."""
+    """Run tests."""
     # test_read_dyn_twix(twix_path=twix_path)
     test_read_dis_twix(twix_path=twix_path)
 

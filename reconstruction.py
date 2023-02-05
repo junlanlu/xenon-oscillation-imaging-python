@@ -1,7 +1,8 @@
 """Reconstruct 3D image from k-space data and trajectory."""
 
+
 import numpy as np
-from absl import app
+from absl import app, logging
 
 from recon import dcf, kernel, proximity, recon_model, system_model
 from utils import io_utils
@@ -57,15 +58,15 @@ def reconstruct(
 
 
 def main(argv):
-    """Demonstrate reconstruction.
+    """Demonstrate non-cartesian reconstruction.
 
     Uses demo data from the assets folder.
     """
-    image = reconstruct(
-        data=io_utils.import_mat("assets/demo_radial_mri_data.mat")["data"],
-        traj=io_utils.import_mat("assets/demo_radial_mri_traj.mat")["traj"],
-    )
+    data = io_utils.import_mat("assets/demo_radial_mri_data.mat")["data"]
+    traj = io_utils.import_mat("assets/demo_radial_mri_traj.mat")["traj"]
+    image = reconstruct(data=data, traj=traj)
     io_utils.export_nii(np.abs(image), "tmp/demo.nii")
+    logging.info("done!")
 
 
 if __name__ == "__main__":

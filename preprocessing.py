@@ -34,8 +34,8 @@ def prepare_data_and_traj(
     data_gas = data_dict[constants.IOFields.FIDS_GAS]
     data_dis = data_dict[constants.IOFields.FIDS_DIS]
     if generate_traj:
-        traj_x, traj_y, traj_z = traj_utils.generate_traj(
-            dwell_time=data_dict[constants.IOFields.DWELL_TIME],
+        traj_x, traj_y, traj_z = traj_utils.generate_trajectory(
+            dwell_time=1e6 * data_dict[constants.IOFields.DWELL_TIME],
             ramp_time=data_dict[constants.IOFields.RAMP_TIME],
             n_frames=data_dict[constants.IOFields.N_FRAMES],
             n_points=data_gas.shape[1],
@@ -58,3 +58,62 @@ def prepare_data_and_traj(
     traj_gas = np.stack([traj_gas_x, traj_gas_y, traj_gas_z], axis=-1)
 
     return data_dis, traj_dis, data_gas, traj_gas
+
+
+def prepare_data_and_traj_keyhole(
+    data: np.ndarray,
+    traj: np.ndarray,
+    bin_indices: np.ndarray,
+    key_radius: int = 10,
+):
+    """Prepare data and trajectory for keyhole reconstruction.
+
+    Uses bin indices to construct a keyhole mask.
+
+    Args:
+        data: data FIDs of shape (n_projections, n_points)
+        traj: trajectory of shape (n_projections, n_points, 3)
+        high_bin_indices: indices of binned projections.
+        key_radius: radius of keyhole in pixels.
+    Returns:
+        A tuple of data and trajectory arrays. The data is flattened to a 1D array
+        of shape (K, 1)
+        The trajectory is flattened to a 2D array of shape (K, 3)
+    """
+    data_copy = data.copy()
+    data[:, 0:key_radius] = 0.0
+    normalization = (
+        np.mean(np.abs(data_copy[bin_indices, 0])) * 1 / np.abs(data_copy[:, 0])
+    )
+    data = np.divide(data, np.expand_dims(normalization, -1))
+    data[bin_indices, 0:key_radius] = data_copy[bin_indices, 0:key_radius]
+
+    return np.delete(
+        recon_utils.flatten_data(data), np.where(data.flatten() == 0.0), axis=0
+    ), np.delete(
+        recon_utils.flatten_traj(traj), np.where(data.flatten() == 0.0), axis=0
+    )
+
+
+def truncate_data_and_traj(
+    data: np.ndarray,
+    traj: np.ndarray,
+    n_skip_start: int = 200,
+    n_skip_end: int = 0,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Truncate data and trajectory to a specified number of points.
+
+    Args:
+        data_dis: data FIDs of shape (n_projections, n_points)
+        traj_dis: trajectory of shape (n_projections, n_points, 3)
+        n_skip_start: number of projections to skip at the start.
+        n_skip_end: number of projections to skip at the end of the trajectory.
+
+    Returns:
+        A tuple of data and trajectory arrays with beginning and end projections
+        removed.
+    """
+    return (
+        data[n_skip_start : -(1 + n_skip_end)],
+        traj[n_skip_start : -(1 + n_skip_end)],
+    )

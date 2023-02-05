@@ -19,22 +19,14 @@ def oscillation_mapping_reconstruction(config: config_dict.ConfigDict):
         config (config_dict.ConfigDict): config dict
     """
     subject = Subject(config=config)
-    # read in dicom files
     subject.read_files()
-    logging.info("2. Getting RBC:M ratio from static spectroscopy.")
-    subject.calculate_static_spectroscopy()
-    logging.info("2. Reconstructing images")
+    logging.info("Getting RBC:M ratio from static spectroscopy.")
+    subject.calculate_rbc_m_ratio()
+    logging.info("Reconstructing images")
+    subject.preprocess()
     subject.reconstruction()
-    logging.info("3. Segmenting Proton Mask")
+    logging.info("Segmenting Proton Mask")
     subject.segmentation()
-    logging.info("4. Binning and Ventilation Mask")
-    subject.gas_binning()
-    subject.generate_statistics()
-    logging.info("5. Generate Clinical Report")
-    subject.generate_figures()
-    subject.generateHtmlPdf()
-    logging.info("6. Exporting .mat and .csv files")
-    subject.generateCSV()
     subject.savefiles()
     logging.info("Complete")
 

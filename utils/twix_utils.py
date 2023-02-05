@@ -129,7 +129,7 @@ def get_excitation_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
         excitation = twix_obj.hdr.Phoenix["sWipMemBlock", "alFree", "4"]
         return round(
             excitation
-            / (constants._GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
+            / (constants.GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
         )
     except:
         pass
@@ -137,14 +137,14 @@ def get_excitation_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
         excitation = twix_obj.hdr.MeasYaps[("sWiPMemBlock", "adFree", "8")]
         return round(
             excitation
-            / (constants._GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
+            / (constants.GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
         )
     except:
         logging.warning("Could not get excitation frequency from twix object.")
 
     return round(
         excitation
-        / (constants._GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
+        / (constants.GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
     )
 
 

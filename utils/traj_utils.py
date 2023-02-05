@@ -1,5 +1,5 @@
 """Trajectory calculation util functions."""
-import logging
+
 import math
 import pdb
 import sys
@@ -59,7 +59,7 @@ def _partition(
     return i + 1
 
 
-def quickSort(
+def quicksort(
     ht_polar: np.ndarray, sp_polar: np.ndarray, sp_azi: np.ndarray, low: int, high: int
 ):
     """Sort ht_polar in ascending order. Use sorted indices to sort sp_polar and sp_azi.
@@ -69,11 +69,11 @@ def quickSort(
     """
     if low < high:
         pi = _partition(ht_polar, sp_polar, sp_azi, low, high)
-        quickSort(ht_polar, sp_polar, sp_azi, low, pi - 1)
-        quickSort(ht_polar, sp_polar, sp_azi, pi + 1, high)
+        quicksort(ht_polar, sp_polar, sp_azi, low, pi - 1)
+        quicksort(ht_polar, sp_polar, sp_azi, pi + 1, high)
 
 
-def halton_number(index: int, base: int) -> float:
+def _halton_number(index: int, base: int) -> float:
     """Calculate halton number.
 
     Reference: https://en.wikipedia.org/wiki/Halton_sequence
@@ -95,7 +95,7 @@ def halton_number(index: int, base: int) -> float:
     return result
 
 
-def haltonSeq(
+def _halton_seq(
     arr_azimuthal_angle: np.ndarray,
     arr_polar_angle: np.ndarray,
     num_frames: int,
@@ -115,13 +115,13 @@ def haltonSeq(
     for lFrame in range(num_frames):
         for lk in range(num_projPerFrame):
             linter = lk + lFrame * num_projPerFrame
-            z = halton_number(lk + 1, p1) * 2 - 1
-            phi = 2 * math.pi * halton_number(lk + 1, p2)
+            z = _halton_number(lk + 1, p1) * 2 - 1
+            phi = 2 * math.pi * _halton_number(lk + 1, p2)
             arr_polar_angle[linter] = math.acos(z)
             arr_azimuthal_angle[linter] = phi
 
 
-def spiralSeq(
+def _spiral_seq(
     arr_azimuthal_angle: np.ndarray,
     arr_polar_angle: np.ndarray,
     num_frames: int,
@@ -155,7 +155,7 @@ def spiralSeq(
             dPreviousAngle = arr_azimuthal_angle[linter]
 
 
-def archimedianSeq(
+def _archimedian_seq(
     arr_azimuthal_angle: np.ndarray,
     arr_polar_angle: np.ndarray,
     num_frames: int,
@@ -180,7 +180,7 @@ def archimedianSeq(
             arr_azimuthal_angle[linter] = lk * dAngle
 
 
-def dgoldenMSeq(
+def _golden_mean_seq(
     arr_azimuthal_angle: np.ndarray,
     arr_polar_angle: np.ndarray,
     num_frames: int,
@@ -202,7 +202,7 @@ def dgoldenMSeq(
             arr_azimuthal_angle[linter] = 2 * math.pi * math.fmod(lk * _GOLDMEAN2, 1)
 
 
-def randomSpiral(
+def _random_spiral_seq(
     arr_azimuthal_angle: np.ndarray,
     arr_polar_angle: np.ndarray,
     num_projPerFrame: int,
@@ -218,31 +218,52 @@ def randomSpiral(
     """
     ht_adAzimu = np.zeros(num_projPerFrame)
     ht_adPolar = np.zeros(num_projPerFrame)
-    haltonSeq(ht_adAzimu, ht_adPolar, 1, num_projPerFrame)
-    quickSort(ht_adPolar, arr_polar_angle, arr_azimuthal_angle, 0, num_projPerFrame - 1)
+    _halton_seq(ht_adAzimu, ht_adPolar, 1, num_projPerFrame)
+    quicksort(ht_adPolar, arr_polar_angle, arr_azimuthal_angle, 0, num_projPerFrame - 1)
 
 
-def traj_factory(traj_type: str) -> Callable:
+def _halton_spiral_seq(
+    arr_azimuthal_angle: np.ndarray,
+    arr_polar_angle: np.ndarray,
+    num_frames: int,
+    num_projPerFrame: int,
+):
+    """Generate halton spiral sequence.
+
+    Updates arrays in place.
+    Args:
+        arr_azimuthal_angle (np.ndarray): azimuthal angle array.
+        arr_polar_angle (np.ndarray): polar angle array.
+        num_frames (int): number of frames.
+        num_projPerFrame (int): number of projections per frame.
+    """
+    _spiral_seq(arr_azimuthal_angle, arr_polar_angle, num_frames, num_projPerFrame)
+    _random_spiral_seq(arr_azimuthal_angle, arr_polar_angle, num_projPerFrame)
+
+
+def _traj_factory(traj_type: str) -> Callable:
     """Get trajectory generation function.
 
     Args:
         traj_type: Trajectory type.
     """
     if traj_type == constants.TrajType.SPIRAL:
-        return spiralSeq
+        return _spiral_seq
     elif traj_type == constants.TrajType.HALTON:
-        return haltonSeq
+        return _halton_seq
+    elif traj_type == constants.TrajType.HALTONSPIRAL:
+        return _halton_spiral_seq
     elif traj_type == constants.TrajType.SPIRALRANDOM:
-        return randomSpiral
+        return _random_spiral_seq
     elif traj_type == constants.TrajType.ARCHIMEDIAN:
-        return archimedianSeq
+        return _archimedian_seq
     elif traj_type == constants.TrajType.GOLDENMEAN:
-        return dgoldenMSeq
+        return _golden_mean_seq
     else:
         raise ValueError("Invalid trajectory type {}.".format(traj_type))
 
 
-def gen_traj(num_projPerFrame: int, traj_type: str) -> np.ndarray:
+def _gen_traj(num_projPerFrame: int, traj_type: str) -> np.ndarray:
     """Generate trajectory by trajectory type.
 
     Args:
@@ -258,7 +279,7 @@ def gen_traj(num_projPerFrame: int, traj_type: str) -> np.ndarray:
     coordinates = np.zeros(num_projPerFrame * 3)
     num_frames = 1
 
-    traj_factory(traj_type)(
+    _traj_factory(traj_type)(
         m_adAzimuthalAngle, m_adPolarAngle, num_frames, num_projPerFrame
     )
 
@@ -271,7 +292,7 @@ def gen_traj(num_projPerFrame: int, traj_type: str) -> np.ndarray:
     return coordinates
 
 
-def generate_radial_1D_traj(
+def _generate_radial_1D_traj(
     decay_time: float = 60,
     dwell_time: float = 10,
     grad_delay_time: float = 0,
@@ -327,7 +348,7 @@ def generate_radial_1D_traj(
     return radial_distance
 
 
-def generate_traj(
+def generate_trajectory(
     decay_time: float = 60,
     del_x: float = 0,
     del_y: float = 0,
@@ -337,7 +358,7 @@ def generate_traj(
     n_points: int = 64,
     plat_time: float = 2500,
     ramp_time: float = 100,
-    traj_type: str = constants.TrajType.HALTON,
+    traj_type: str = constants.TrajType.HALTONSPIRAL,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate and vectorize trajectory and data.
 
@@ -366,8 +387,7 @@ def generate_traj(
         Tuple[np.ndarray, np.ndarray, np.ndarray]: trajectory coodinates in the x, y,
             and z directions.
     """
-
-    radial_distance_x = generate_radial_1D_traj(
+    radial_distance_x = _generate_radial_1D_traj(
         decay_time=decay_time,
         dwell_time=dwell_time,
         n_points=n_points,
@@ -375,7 +395,7 @@ def generate_traj(
         plat_time=plat_time,
         ramp_time=ramp_time,
     )
-    radial_distance_y = generate_radial_1D_traj(
+    radial_distance_y = _generate_radial_1D_traj(
         decay_time=decay_time,
         dwell_time=dwell_time,
         n_points=n_points,
@@ -383,7 +403,7 @@ def generate_traj(
         plat_time=plat_time,
         ramp_time=ramp_time,
     )
-    radial_distance_z = generate_radial_1D_traj(
+    radial_distance_z = _generate_radial_1D_traj(
         decay_time=decay_time,
         dwell_time=dwell_time,
         n_points=n_points,
@@ -392,7 +412,7 @@ def generate_traj(
         ramp_time=ramp_time,
     )
 
-    traj_angular = gen_traj(n_frames, traj_type)
+    traj_angular = _gen_traj(n_frames, traj_type)
     x = traj_angular[:n_frames]
     y = traj_angular[n_frames : 2 * n_frames]
     z = traj_angular[2 * n_frames : 3 * n_frames]
@@ -404,7 +424,7 @@ def generate_traj(
     return x, y, z
 
 
-def get_trajectory_scaling_factor(recon_size: float, n_points: float) -> float:
+def get_scaling_factor(recon_size: float = 128, n_points: float = 64) -> float:
     """Get the scaling factor for the trajectory.
 
     The scaling factor is used to scale the trajectory to the reconstruction size.
@@ -418,12 +438,12 @@ def get_trajectory_scaling_factor(recon_size: float, n_points: float) -> float:
     Returns:
         (float) The scaling factor.
     """
-    return 0.5 * recon_size / n_points
+    return 0.5 * n_points / recon_size
 
 
 def main(argv):
     """Generate trajectories for the given number of projections and trajectory type."""
-    gen_traj(FLAGS.n_proj, FLAGS.traj_type)
+    _gen_traj(FLAGS.n_proj, FLAGS.traj_type)
 
 
 if __name__ == "__main__":

@@ -39,27 +39,24 @@ def remove_noise_rays(
     return data[good_index], traj_x[good_index], traj_y[good_index], traj_z[good_index]
 
 
-def complex_align(x: np.ndarray) -> np.ndarray:
-    """Flip and take transpose of image volume.
+def flatten_data(data: np.ndarray) -> np.ndarray:
+    """Flatten data for reconstruction.
 
-    This may be needed to make the image be in the coronal direction.
     Args:
-        x (np.ndarray): image volume
+        data (np.ndarray): data of shape (n_projections, n_points)
 
     Returns:
-        np.ndarray: Flipped and transposed image volume.
+        np.ndarray: flattened data of shape (n_projections * n_points, 1)
     """
-    return np.flip(np.flip(np.flip(np.transpose(x, (2, 1, 0)), 0), 1), 2)
+    return data.reshape((data.shape[0] * data.shape[1], 1))
 
 
-def alignrot(x: np.ndarray) -> np.ndarray:
-    """Flip image volume.
+def flatten_traj(traj: np.ndarray) -> np.ndarray:
+    """Flatten trajectory for reconstruction.
 
-    This may be needed to make the image be in the coronal direction.
     Args:
-        x (np.ndarray): image volume
-
+        traj (np.ndarray): trajectory of shape (n_projections, n_points, 3)
     Returns:
-        np.ndarray: Flipped image volume
+        np.ndarray: flattened trajectory of shape (n_projections * n_points, 3)
     """
-    return np.flip(np.flip(np.flip(x, 0), 1), 2)
+    return traj.reshape((traj.shape[0] * traj.shape[1], 3))

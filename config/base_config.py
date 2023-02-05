@@ -17,6 +17,8 @@ class Config(config_dict.ConfigDict):
         super().__init__()
         self.data_dir = ""
         self.filepath_twix_dyn = ""
+        self.filepath_twix_dis = ""
+        self.manual_seg_filepath = ""
         self.processes = Process()
         self.recon = Recon()
         self.platform = constants.Platform
@@ -25,6 +27,7 @@ class Config(config_dict.ConfigDict):
         self.site = constants.Site.DUKE.value
         self.subject_id = "test"
         self.rbc_m_ratio = 0.0
+        self.kernel_sharpness = 0.14
 
 
 class Process(object):
@@ -32,7 +35,6 @@ class Process(object):
 
     def __init__(self):
         """Initialize the process parameters."""
-        super().__init__()
         self.oscillation_mapping_recon = True
         self.oscillation_mapping_readin = False
 
@@ -42,9 +44,8 @@ class Recon(object):
 
     def __init__(self):
         """Initialize the reconstruction parameters."""
-        super().__init__()
-        self.n_begin_cutoff = 100
-        self.n_end_cutoff = 0
+        self.n_skip_start = 100
+        self.n_skip_end = 0
         self.key_radius = 9
         self.key_radius_percentage = 30
         self.oscillation_mapping_readin = False

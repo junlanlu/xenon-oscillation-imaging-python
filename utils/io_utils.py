@@ -6,6 +6,7 @@ import sys
 
 sys.path.append("..")
 import csv
+import glob
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -36,6 +37,36 @@ def import_mat(path: str) -> Dict[str, Any]:
     return sio.loadmat(path)
 
 
+def get_dyn_twix_files(path: str) -> str:
+    """Get list of dynamic spectroscopy twix files.
+
+    Args:
+        path: str directory path of twix files
+    """
+    try:
+        return (
+            glob.glob(os.path.join(path, "**cali**.dat"))
+            + glob.glob(os.path.join(path, "**dynamic**.dat"))
+        )[0]
+    except:
+        raise ValueError("Can't find twix file in path.")
+
+
+def get_dis_twix_files(path: str) -> str:
+    """Get list of gas exchange twix files.
+
+    Args:
+        path: str directory path of twix files
+    """
+    try:
+        return (
+            glob.glob(os.path.join(path, "**dixon***.dat"))
+            + glob.glob(os.path.join(path, "**Dixon***.dat"))
+        )[0]
+    except:
+        raise ValueError("Can't find twix file in path.")
+
+
 def read_dyn_twix(path: str) -> Dict[str, Any]:
     """Read dynamic spectroscopy twix file.
 
@@ -48,7 +79,7 @@ def read_dyn_twix(path: str) -> Dict[str, Any]:
         3. TR in seconds.
         4. Center frequency in MHz.
         5. excitation frequency in ppm.
-        6. dissolved phase FIDs in format (n_points, n_frames).
+        6. dissolved phase FIDs in format (n_points, n_projections).
     """
     try:
         twix_obj = mapvbvd.mapVBVD(path)
@@ -83,13 +114,25 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
         path: str file path of twix file
     Returns: dictionary containing data and metadata extracted from the twix file.
     This includes:
-        1. scan date in
-        MM-DD-YYY format.
-        2. dwell time in seconds.
-        3. TR in seconds.
-        4. Center frequency in MHz.
-        5. excitation frequency in ppm.
-        6. dissolved phase FIDs in format (n_points, n_frames).
+        - dwell time in seconds.
+        - flip angle applied to dissolved phase in degrees.
+        - flip angle applied to gas phase in degrees.
+        - dissolved phase FIDs in format (n_projections, n_points).
+        - gas phase FIDs in format (n_projections, n_points).
+        - field of view in cm.
+        - center frequency in MHz.
+        - excitation frequency in ppm.
+        - gradient delay (x, y, z) in microseconds.
+        - number of frames (projections) used to calculate trajectory.
+        - number of projections to skip at the beginning of the scan.
+        - number of projections to skip at the end of the scan.
+        - orientation of the scan.
+        - protocol name
+        - ramp time in microseconds.
+        - scan date in YYYY-MM-DD format.
+        - software version
+        - TE90 in seconds.
+        - TR in seconds.
     """
     try:
         twix_obj = mapvbvd.mapVBVD(path)
@@ -110,6 +153,12 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
         constants.IOFields.FOV: twix_utils.get_FOV(twix_obj),
         constants.IOFields.FREQ_CENTER: twix_utils.get_center_freq(twix_obj),
         constants.IOFields.FREQ_EXCITATION: twix_utils.get_excitation_freq(twix_obj),
+        constants.IOFields.GRAD_DELAY_X: data_dict[constants.IOFields.GRAD_DELAY_X],
+        constants.IOFields.GRAD_DELAY_Y: data_dict[constants.IOFields.GRAD_DELAY_Y],
+        constants.IOFields.GRAD_DELAY_Z: data_dict[constants.IOFields.GRAD_DELAY_Z],
+        constants.IOFields.N_FRAMES: data_dict[constants.IOFields.N_FRAMES],
+        constants.IOFields.N_SKIP_END: data_dict[constants.IOFields.N_SKIP_END],
+        constants.IOFields.N_SKIP_START: data_dict[constants.IOFields.N_SKIP_START],
         constants.IOFields.ORIENTATION: twix_utils.get_orientation(twix_obj),
         constants.IOFields.PROTOCOL_NAME: twix_utils.get_protocol_name(twix_obj),
         constants.IOFields.RAMP_TIME: twix_utils.get_ramp_time(twix_obj),
@@ -118,12 +167,6 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
         constants.IOFields.SOFTWARE_VERSION: twix_utils.get_software_version(twix_obj),
         constants.IOFields.TE90: twix_utils.get_TE90(twix_obj),
         constants.IOFields.TR: twix_utils.get_TR(twix_obj),
-        constants.IOFields.N_FRAMES: data_dict[constants.IOFields.N_FRAMES],
-        constants.IOFields.N_SKIP_START: data_dict[constants.IOFields.N_SKIP_START],
-        constants.IOFields.N_SKIP_END: data_dict[constants.IOFields.N_SKIP_END],
-        constants.IOFields.GRAD_DELAY_X: data_dict[constants.IOFields.GRAD_DELAY_X],
-        constants.IOFields.GRAD_DELAY_Y: data_dict[constants.IOFields.GRAD_DELAY_Y],
-        constants.IOFields.GRAD_DELAY_Z: data_dict[constants.IOFields.GRAD_DELAY_Z],
     }
 
 

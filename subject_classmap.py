@@ -36,7 +36,11 @@ class Subject(object):
         """Init object."""
         logging.info("Initializing oscillation imaging subject.")
         self.config = config
-        self.gas_highSNR = np.array([0.0])
+        self.image_gas = np.array([0.0])
+        self.image_dissolved = np.array([0.0])
+        self.image_membrane = np.array([0.0])
+        self.image_rbc = np.array([0.0])
+        self.mask = np.array([0.0])
         self.manual_segmentation_filepath = str(config.manual_seg_filepath)
         self.rbc_m_ratio = 0.0
         self.segmentation_key = str(config.segmentation_key)
@@ -58,11 +62,15 @@ class Subject(object):
         data. Currently only supports twix files but will be extended to support
         other files.
         """
-        self.dict_dyn = io_utils.read_dyn_twix(str(self.config.filepath_twix_dyn))
-        self.dict_dis = io_utils.read_dis_twix(str(self.config.filepath_twix_dis))
+        self.dict_dyn = io_utils.read_dyn_twix(
+            io_utils.get_dyn_twix_files(str(self.config.data_dir))
+        )
+        self.dict_dis = io_utils.read_dis_twix(
+            io_utils.get_dis_twix_files(str(self.config.data_dir))
+        )
 
-    def calculate_static_spectroscopy(self):
-        """Calculate static spectroscopy to derive the RBC:M ratio.
+    def calculate_rbc_m_ratio(self):
+        """Calculate RBC:M ratio using static spectroscopy.
 
         If a manual RBC:M ratio is specified, use that instead.
         """
@@ -87,45 +95,56 @@ class Subject(object):
     def preprocess(self):
         """Prepare data and trajectory for reconstruction."""
         (
-            self.data_dis,
-            self.traj_dis,
+            self.data_dissolved,
+            self.traj_dissolved,
             self.data_gas,
             self.traj_gas,
-        ) = preprocessing.prepare_data_and_traj(self.dict_dyn)
+        ) = preprocessing.prepare_data_and_traj(self.dict_dis)
+        self.data_dissolved, self.traj_dissolved = preprocessing.truncate_data_and_traj(
+            self.data_dissolved,
+            self.traj_dissolved,
+            n_skip_start=int(self.config.recon.n_skip_start),
+            n_skip_end=int(self.config.recon.n_skip_end),
+        )
 
     def reconstruction(self):
         """Reconstruct the oscillation image."""
         self.image_gas = reconstruction.reconstruct(
-            data=self.data_gas, traj=self.traj_gas
+            data=recon_utils.flatten_data(self.data_gas),
+            traj=recon_utils.flatten_traj(self.traj_gas),
+            kernel_sharpness=0.32,
+        )
+        self.image_dissolved = reconstruction.reconstruct(
+            data=recon_utils.flatten_data(self.data_dissolved),
+            traj=recon_utils.flatten_traj(self.traj_dissolved),
+            kernel_sharpness=0.14,
         )
 
     def segmentation(self):
         """Segment the thoracic cavity."""
         if self.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
             logging.info("Performing neural network segmenation.")
-            self.mask_reg = segmentation.predict(self.gas_highSNR)
+            self.mask = segmentation.predict(self.image_gas)
         elif self.segmentation_key == constants.SegmentationKey.SKIP.value:
-            self.mask_reg = np.ones_like(self.ventilation)
+            self.mask = np.ones_like(self.image_gas)
         elif self.segmentation_key == constants.SegmentationKey.MANUAL_VENT.value:
             logging.info("loading mask file specified by the user.")
             try:
                 mask = glob.glob(self.manual_segmentation_filepath)[0]
-                self.mask_reg = np.squeeze(np.array(nib.load(mask).get_fdata()))
+                self.mask = np.squeeze(np.array(nib.load(mask).get_fdata()))
             except ValueError:
                 logging.error("Invalid mask nifti file.")
-        elif self.segmentation_key == constants.SegmentationKey.THRESHOLD_VENT.value:
-            logging.info("segmentation via thresholding.")
-            self.mask_reg = (
-                self.ventilation
-                > np.percentile(
-                    self.ventilation, constants._VEN_PERCENTILE_THRESHOLD_SEG
-                )
-            ).astype(bool)
-            self.mask_reg = img_utils.remove_small_objects(self.mask_reg).astype(
-                "float64"
-            )
         else:
             raise ValueError("Invalid segmentation key.")
+
+    def dixon_decomposition(self):
+        """Perform 1-point Dixon decomposition."""
+        self.image_rbc, self.image_membrane = img_utils.dixon_decomposition(
+            image_gas=self.image_gas,
+            image_dissolved=self.image_dissolved,
+            mask=self.mask,
+            rbc_m_ratio=self.rbc_m_ratio,
+        )
 
     def oscillation_binning(self):
         """Bin oscillation image to colormap bins."""

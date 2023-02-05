@@ -1,6 +1,7 @@
 """Gridding kernels."""
 
 import logging
+import pdb
 import sys
 from abc import ABC, abstractmethod
 from typing import Tuple
@@ -9,6 +10,22 @@ import numpy as np
 
 sys.path.append("..")
 from recon import kernel, sparse_gridding_distance
+
+
+def _get_n_nonsparse_entries(n_points: int, kernel_width: float, n_dims: int) -> int:
+    """Calculate maximum size of output indices.
+
+    Args:
+        n_points (int): number of points
+        kernel_width (float): kernel width
+        n_dims (int): number of dimensions
+    Returns:
+        int: number of non-sparse entries
+    """
+    max_nNeighbors = 1
+    for _ in range(0, n_dims):
+        max_nNeighbors = int(max_nNeighbors * (kernel_width + 1))
+    return int(n_points * max_nNeighbors)
 
 
 class Proximity(ABC):
@@ -75,7 +92,7 @@ class L2Proximity(Proximity):
         """Perform sparse gridding.
 
         Args:
-            traj (np.ndarray): trajectory of shape (K, 3)
+            traj (np.ndarray): trajectory of shape (K, n_dims)
             overgrid_factor (int): overgridding factor. typically 3
             matrix_size (np.ndarray): the gridding matrix size. This will be the
                 reconstruction matrix size times the overgrid factor. Of shape (N,N,N)
@@ -85,24 +102,25 @@ class L2Proximity(Proximity):
         """
         if self.verbosity:
             logging.info("Calculating L2 distances ...")
-        # (
-        #     sample_idx,
-        #     voxel_idx,
-        #     pre_overgrid_distances,
-        # ) = sparse_gridding_distance.sparse_gridding_distance(
-        #     traj=traj,
-        #     kernel_para=overgrid_factor * self.kernel_obj.extent,
-        #     matrix_size=matrix_size,
-        #     force_dim=-1,
-        # )
+
+        assert traj.ndim == 2, "Trajectory must be of shape (K, n_dims)"
+
+        n_points, n_dims = traj.shape[0], traj.shape[1]
+        kernel_width = overgrid_factor * self.kernel_obj.extent
         (
             sample_idx,
             voxel_idx,
             pre_overgrid_distances,
-        ) = sparse_gridding_distance.sparse_gridding_c(
-            traj=traj,
-            kernel_para=overgrid_factor * self.kernel_obj.extent,
-            matrix_size=matrix_size,
+        ) = sparse_gridding_distance.sparse_gridding_distance(
+            coords=traj.flatten(),
+            kernel_width=kernel_width,
+            n_points=n_points,
+            n_dims=n_dims,
+            output_dims=matrix_size,
+            n_nonsparse_entries=np.array([0]).astype(int),
+            max_size=_get_n_nonsparse_entries(
+                n_points=n_points, kernel_width=kernel_width, n_dims=n_dims
+            ),
             force_dim=-1,
         )
         pre_overgrid_distances = pre_overgrid_distances / overgrid_factor
