@@ -133,3 +133,23 @@ def dixon_decomposition(
     diffphase = -correct_B0(image_gas, mask)
     rotVol_B = np.multiply(rotVol, np.exp(1j * diffphase))
     return np.imag(rotVol_B), np.real(rotVol_B)
+
+
+def calculate_rbc_oscillation(
+    image_high: np.ndarray,
+    image_low: np.ndarray,
+    image_total: np.ndarray,
+    method: str = constants.Methods.ELEMENTWISE,
+) -> np.ndarray:
+    """Calculate RBC oscillation.
+
+    Args:
+        image_high (np.ndarray): high rbc image.
+        image_low (np.ndarray): low rbc image.
+        image_total (np.ndarray): total image.
+        method (str): method to use for calculating oscillation.
+    """
+    if method == constants.Methods.ELEMENTWISE:
+        return (image_high - image_low) / image_total
+    else:
+        raise ValueError("Invalid method: {}.".format(method))

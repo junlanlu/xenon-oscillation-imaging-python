@@ -25,7 +25,6 @@ def test_preprocessing(twix_path: str):
         traj_dis,
         bin_indices,
     )
-    pdb.set_trace()
     image = reconstruction.reconstruct(
         data, traj_utils.get_scaling_factor(RECON_IMAGE_SIZE, data_gas.shape[1]) * traj
     )

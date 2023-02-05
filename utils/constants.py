@@ -169,6 +169,13 @@ class DCFSpace(object):
     DATASPACE = "dataspace"
 
 
+class Methods(object):
+    """Defines the method to calculate the RBC oscillation image."""
+
+    ELEMENTWISE = "elementwise"
+    MEAN = "mean"
+
+
 class STATSIOFields(object):
     """Statistic IO Fields."""
 

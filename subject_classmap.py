@@ -10,6 +10,7 @@ import numpy as np
 import scipy.io as sio
 from ml_collections import config_dict
 
+import oscillation_binning as ob
 import preprocessing
 import reconstruction
 import segmentation
@@ -36,23 +37,28 @@ class Subject(object):
         """Init object."""
         logging.info("Initializing oscillation imaging subject.")
         self.config = config
-        self.image_gas = np.array([0.0])
+        self.data_dis = np.array([])
+        self.data_dis_high = np.array([])
+        self.data_dis_low = np.array([])
+        self.data_gas = np.array([])
+        self.dict_dis = {}
+        self.dict_dyn = {}
+        self.high_indices = np.array([0.0])
         self.image_dissolved = np.array([0.0])
+        self.image_gas = np.array([0.0])
         self.image_membrane = np.array([0.0])
         self.image_rbc = np.array([0.0])
-        self.mask = np.array([0.0])
+        self.image_rbc_high = np.array([0.0])
+        self.image_rbc_low = np.array([0.0])
+        self.image_rbc_osc = np.array([0.0])
+        self.low_indices = np.array([0.0])
         self.manual_segmentation_filepath = str(config.manual_seg_filepath)
+        self.mask = np.array([0.0])
         self.rbc_m_ratio = 0.0
         self.segmentation_key = str(config.segmentation_key)
-        self.dict_dyn = {}
-        self.dict_dis = {}
-        self.data_dis = np.array([])
-        self.data_gas = np.array([])
         self.traj_dis = np.array([])
         self.traj_dis_high = np.array([])
         self.traj_dis_low = np.array([])
-        self.data_dis_high = np.array([])
-        self.data_dis_low = np.array([])
         self.traj_gas = np.array([])
 
     def read_files(self):
@@ -107,17 +113,62 @@ class Subject(object):
             n_skip_end=int(self.config.recon.n_skip_end),
         )
 
-    def reconstruction(self):
-        """Reconstruct the oscillation image."""
+    def reconstruction_gas(self):
+        """Reconstruct the gas phase image."""
         self.image_gas = reconstruction.reconstruct(
             data=recon_utils.flatten_data(self.data_gas),
             traj=recon_utils.flatten_traj(self.traj_gas),
             kernel_sharpness=0.32,
         )
+
+    def reconstruction_dissolved(self):
+        """Reconstruct the dissolved phase image."""
         self.image_dissolved = reconstruction.reconstruct(
             data=recon_utils.flatten_data(self.data_dissolved),
             traj=recon_utils.flatten_traj(self.traj_dissolved),
             kernel_sharpness=0.14,
+        )
+        self.image_rbc, self.image_membrane = img_utils.dixon_decomposition(
+            image_gas=self.image_gas,
+            image_dissolved=self.image_dissolved,
+            mask=self.mask,
+            rbc_m_ratio=self.rbc_m_ratio,
+        )
+
+    def reconstruction_rbc_oscillation(self):
+        """Reconstruct the RBC oscillation image."""
+        self.high_indices, self.low_indices = ob.bin_rbc_oscillations(
+            data_gas=self.data_gas,
+            data_dis=self.data_dis,
+            rbc_m_ratio=self.rbc_m_ratio,
+            TR=self.dict_dis[constants.IOFields.TR],
+        )
+        data_dis_high, traj_dis_high = preprocessing.prepare_data_and_traj_keyhole(
+            self.data_dis, self.traj_dis, self.high_indices
+        )
+        data_dis_low, traj_dis_low = preprocessing.prepare_data_and_traj_keyhole(
+            self.data_dis, self.traj_dis, self.low_indices
+        )
+        image_dissolved_high = reconstruction.reconstruct(
+            data=data_dis_high, traj=traj_dis_high, kernel_sharpness=0.14
+        )
+        image_dissolved_low = reconstruction.reconstruct(
+            data=data_dis_low, traj=traj_dis_low, kernel_sharpness=0.14
+        )
+        self.image_rbc_high, _ = img_utils.dixon_decomposition(
+            image_gas=self.image_gas,
+            image_dissolved=image_dissolved_high,
+            mask=self.mask,
+            rbc_m_ratio=self.rbc_m_ratio,
+        )
+        self.image_rbc_low, _ = img_utils.dixon_decomposition(
+            image_gas=self.image_gas,
+            image_dissolved=image_dissolved_low,
+            mask=self.mask,
+            rbc_m_ratio=self.rbc_m_ratio,
+        )
+        self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
+            self.image_rbc_high, self.image_rbc_low, self.image_rbc
         )
 
     def segmentation(self):
@@ -136,15 +187,6 @@ class Subject(object):
                 logging.error("Invalid mask nifti file.")
         else:
             raise ValueError("Invalid segmentation key.")
-
-    def dixon_decomposition(self):
-        """Perform 1-point Dixon decomposition."""
-        self.image_rbc, self.image_membrane = img_utils.dixon_decomposition(
-            image_gas=self.image_gas,
-            image_dissolved=self.image_dissolved,
-            mask=self.mask,
-            rbc_m_ratio=self.rbc_m_ratio,
-        )
 
     def oscillation_binning(self):
         """Bin oscillation image to colormap bins."""
