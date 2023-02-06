@@ -166,7 +166,7 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
         constants.IOFields.SCAN_DATE: twix_utils.get_scan_date(twix_obj),
         constants.IOFields.SOFTWARE_VERSION: twix_utils.get_software_version(twix_obj),
         constants.IOFields.TE90: twix_utils.get_TE90(twix_obj),
-        constants.IOFields.TR: twix_utils.get_TR(twix_obj),
+        constants.IOFields.TR: twix_utils.get_TR_dissolved(twix_obj),
     }
 
 

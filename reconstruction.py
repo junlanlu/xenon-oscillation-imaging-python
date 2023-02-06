@@ -1,6 +1,8 @@
 """Reconstruct 3D image from k-space data and trajectory."""
 
 
+import pdb
+
 import numpy as np
 from absl import app, logging
 
@@ -12,6 +14,7 @@ def reconstruct(
     data: np.ndarray,
     traj: np.ndarray,
     kernel_sharpness: float = 0.32,
+    kernel_extent: float = 0.32 * 9,
     overgrid_factor: int = 3,
     image_size: int = 128,
     n_dcf_iter: int = 15,
@@ -24,6 +27,7 @@ def reconstruct(
         traj (np.ndarray): k space trajectory of shape (K, 3)
         kernel_sharpness (float): kernel sharpness. larger kernel sharpness is sharper
             image
+        kernel_extent (float): kernel extent.
         overgrid_factor (int): overgridding factor
         image_size (int): target reconstructed image size
             (image_size, image_size, image_size)
@@ -35,7 +39,7 @@ def reconstruct(
     """
     prox_obj = proximity.L2Proximity(
         kernel_obj=kernel.Gaussian(
-            kernel_extent=9 * kernel_sharpness,
+            kernel_extent=kernel_extent,
             kernel_sigma=kernel_sharpness,
             verbosity=verbosity,
         ),
@@ -54,7 +58,8 @@ def reconstruct(
     recon_obj = recon_model.LSQgridded(
         system_obj=system_obj, dcf_obj=dcf_obj, verbosity=verbosity
     )
-    return recon_obj.reconstruct(data=data, traj=traj)
+    image = recon_obj.reconstruct(data=data, traj=traj)
+    return image
 
 
 def main(argv):
@@ -64,7 +69,14 @@ def main(argv):
     """
     data = io_utils.import_mat("assets/demo_radial_mri_data.mat")["data"]
     traj = io_utils.import_mat("assets/demo_radial_mri_traj.mat")["traj"]
-    image = reconstruct(data=data, traj=traj)
+    image = reconstruct(
+        data=data,
+        traj=traj,
+        kernel_sharpness=1.0 / 3,
+        kernel_extent=2,
+        n_dcf_iter=10,
+        verbosity=True,
+    )
     io_utils.export_nii(np.abs(image), "tmp/demo.nii")
     logging.info("done!")
 

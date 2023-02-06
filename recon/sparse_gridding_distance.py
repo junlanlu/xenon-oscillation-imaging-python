@@ -1,17 +1,17 @@
 """Sparse grid distance calculation.
 
-    An N-Dimmensional convolution based gridding algorithm. Motivated by
-    code written by Gary glover (http://www-mrsrl.stanford.edu/~brian/gridding/)
-    and also from code by Nick Zwart.
-    For background reading, I suggest:
-        1. A fast Sinc Function Gridding Algorithm for Fourier Inversion in
-        Computer Tomography. O'Sullivan. 1985.
-        2. Selection of a Convolution Function for Fourier Inversion using
-        Gridding. Jackson et al. 1991.
-        3. Rapid Gridding Reconstruction With a Minimal Oversampling Ratio.
-        Beatty et al. 2005.
-    
-    This code is based off the code written by Scott Robertson.
+An N-Dimmensional convolution based gridding algorithm. Motivated by
+code written by Gary glover (http://www-mrsrl.stanford.edu/~brian/gridding/)
+and also from code by Nick Zwart.
+Background reading:
+    1. A fast Sinc Function Gridding Algorithm for Fourier Inversion in
+    Computer Tomography. O'Sullivan. 1985.
+    2. Selection of a Convolution Function for Fourier Inversion using
+    Gridding. Jackson et al. 1991.
+    3. Rapid Gridding Reconstruction With a Minimal Oversampling Ratio.
+    Beatty et al. 2005.
+
+This code is based off the code written by Scott Robertson.
     
     Source: https://github.com/ScottHaileRobertson/Non-Cartesian-Reconstruction
 """

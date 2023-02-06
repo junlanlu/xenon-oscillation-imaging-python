@@ -344,7 +344,7 @@ def get_protocol_name(twix_obj: mapvbvd._attrdict.AttrDict) -> str:
 def get_dyn_dissolved_fids(
     twix_obj: mapvbvd._attrdict.AttrDict, n_skip_end: int = 20
 ) -> np.ndarray:
-    """Get the dissoled phase FIDS used for dyn. spectroscopy from twix object.
+    """Get the dissolved phase FIDS used for dyn. spectroscopy from twix object.
 
     Args:
         twix_obj: twix object returned from mapVBVD function

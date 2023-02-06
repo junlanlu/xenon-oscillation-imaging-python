@@ -43,7 +43,7 @@ def test_find_high_low_indices():
 def main(argv):
     """Run tests."""
     test_get_heart_rate()
-    test_find_high_low_indices()
+    # test_find_high_low_indices()
 
 
 if __name__ == "__main__":

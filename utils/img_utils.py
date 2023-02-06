@@ -3,6 +3,8 @@
 import pdb
 import sys
 
+import cv2
+
 sys.path.append("..")
 from typing import Any, List, Tuple
 
@@ -76,6 +78,37 @@ def flip_and_rotate_image(
         raise ValueError("Invalid orientation: {}.".format(orientation))
 
 
+def standardize_image(image: np.ndarray) -> np.ndarray:
+    """Standardize image.
+
+    Args:
+        image (np.ndarray): image to standardize.
+    Returns:
+        Standardized image.
+    """
+    image = np.abs(image)
+    image = 255 * (image - np.min(image)) / (np.max(image) - np.min(image))
+    image = (image - np.mean(image)) / np.std(image)
+    return image
+
+
+def erode_image(image: np.ndarray, erosion: int) -> np.ndarray:
+    """Erode image.
+
+    Erodes image slice by slice.
+
+    Args:
+        image (np.ndarray): 3-D image to erode.
+        erosion (int): size of erosion kernel.
+    Returns:
+        Eroded image.
+    """
+    kernel = np.ones((erosion, erosion), np.uint8)
+    for i in range(image.shape[2]):
+        image[:, :, i] = cv2.erode(image[:, :, i], kernel, iterations=1)
+    return image
+
+
 def correct_B0(
     image: np.ndarray, mask: np.ndarray, max_iterations: int = 20
 ) -> np.ndarray:
@@ -124,7 +157,7 @@ def dixon_decomposition(
         Tuple of decomposed RBC and membrane images.
     """
     desired_angle = np.arctan2(rbc_m_ratio, 1.0)
-    total_dissolved = np.sum(image_dissolved[mask])
+    total_dissolved = np.sum(image_dissolved[mask > 0])
     current_angle = np.arctan2(np.imag(total_dissolved), np.real(total_dissolved))
     delta_angle = desired_angle - current_angle
 
@@ -139,7 +172,8 @@ def calculate_rbc_oscillation(
     image_high: np.ndarray,
     image_low: np.ndarray,
     image_total: np.ndarray,
-    method: str = constants.Methods.ELEMENTWISE,
+    mask: np.ndarray,
+    method: str = constants.Methods.MEAN,
 ) -> np.ndarray:
     """Calculate RBC oscillation.
 
@@ -147,9 +181,14 @@ def calculate_rbc_oscillation(
         image_high (np.ndarray): high rbc image.
         image_low (np.ndarray): low rbc image.
         image_total (np.ndarray): total image.
+        mask(np.ndarray): booleaan mask of the lung. Must be the same size as the images.
         method (str): method to use for calculating oscillation.
     """
+    image_total = image_total.copy()
+    image_total[mask == 0] = np.max(image_total[mask > 0])
     if method == constants.Methods.ELEMENTWISE:
         return (image_high - image_low) / image_total
+    elif method == constants.Methods.MEAN:
+        return (image_high - image_low) / np.abs(np.mean(image_total[mask > 0]))
     else:
         raise ValueError("Invalid method: {}.".format(method))

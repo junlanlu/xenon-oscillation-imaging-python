@@ -10,7 +10,7 @@ from absl import app, flags
 from scipy.ndimage import zoom
 
 from models.model_vnet import vnet
-from utils import constants, io_utils
+from utils import constants, img_utils, io_utils
 
 # define flags
 FLAGS = flags.FLAGS
@@ -20,7 +20,9 @@ flags.DEFINE_string("nii_filepath", "", "nii image file path")
 
 
 def predict(
-    image: np.ndarray, image_type: str = constants.ImageType.VENT.value
+    image: np.ndarray,
+    image_type: str = constants.ImageType.VENT.value,
+    erosion: int = 0,
 ) -> np.ndarray:
     """Generate a segmentation mask from the proton or ventilation image.
 
@@ -30,9 +32,9 @@ def predict(
     Returns:
         mask: np.ndarray of type bool of the output mask.
     """
-    # Get shape of the image
+    # get shape of the image
     img_h, img_w, _ = np.shape(image)
-    # Reshaping image for segmentation
+    # reshaping image for segmentation
     if img_h == 64 and img_w == 64:
         print("Reshaping image for segmentation")
         image = zoom(abs(image), [2, 2, 2])
@@ -51,12 +53,7 @@ def predict(
     model.load_weights(weights_dir_current)
 
     if image_type == constants.ImageType.VENT.value:
-        image = np.abs(image)
-        image = 255 * (image - np.min(image)) / (np.max(image) - np.min(image))
-
-        ven_mean = np.mean(image)
-        ven_std = np.std(image)
-        image = (image - ven_mean) / (ven_std)
+        image = img_utils.standardize_image(image)
     else:
         raise ValueError("Image type must be ute or vent")
     # Model Prediction
@@ -67,6 +64,9 @@ def predict(
     mask = mask[0, :, :, :, 0]
     mask[mask > 0.5] = 1
     mask[mask < 1] = 0
+    # erode mask
+    if erosion > 0:
+        mask = img_utils.erode_image(mask, erosion)
     return mask.astype(bool)
 
 

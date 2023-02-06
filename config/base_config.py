@@ -49,6 +49,7 @@ class Recon(object):
         self.key_radius = 9
         self.key_radius_percentage = 30
         self.oscillation_mapping_readin = False
+        self.recon_size = 128
 
 
 def get_config() -> config_dict.ConfigDict:

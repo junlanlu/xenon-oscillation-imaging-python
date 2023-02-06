@@ -29,8 +29,8 @@ def dixon_decomposition(
     current_angle = np.arctan2(np.imag(total_dissolved), np.real(total_dissolved))
     delta_angle = desired_angle - current_angle
 
-    rotVol = np.multiply(data_dissolved, np.exp(1j * delta_angle))
-    return np.imag(rotVol), np.real(rotVol)
+    rotated_data = np.multiply(data_dissolved, np.exp(1j * delta_angle))
+    return np.imag(rotated_data), np.real(rotated_data)
 
 
 def smooth(data: np.ndarray, window_size: int = 5) -> np.ndarray:
@@ -69,7 +69,7 @@ def bandpass(data: np.ndarray, lowcut: float, highcut: float, fs: float) -> np.n
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
-    b, a = signal.butter(5, [low, high], btype="bandpass")
+    b, a = signal.butter(6, [low, high], btype="bandpass")
     return signal.filtfilt(b, a, data)
 
 
@@ -90,7 +90,7 @@ def find_peaks(data: np.ndarray, distance: int = 5) -> np.ndarray:
     return peaks[np.argwhere(data[peaks] > 0).flatten()]
 
 
-def get_heartrate(data: np.ndarray, fs: float) -> float:
+def get_heartrate(data: np.ndarray, ts: float) -> float:
     """Calculate heart rate from data.
 
     Implements a heart rate calculation function by finding the strongest peak
@@ -98,13 +98,13 @@ def get_heartrate(data: np.ndarray, fs: float) -> float:
 
     Args:
         data (np.ndarray): 1-D array data to be filtered.
-        fs (float): sampling frequency in Hz.
+        ts (float): sampling period in seconds.
 
     Returns:
         Heart rate in beats per minute.
     """
     fft_data = np.abs(np.fft.fftshift(np.fft.fft(data)))
-    freq = np.fft.fftshift(np.fft.fftfreq(len(data), fs))
+    freq = np.fft.fftshift(np.fft.fftfreq(len(data), ts))
     return np.abs(freq[np.argmax(fft_data)] * 60)
 
 

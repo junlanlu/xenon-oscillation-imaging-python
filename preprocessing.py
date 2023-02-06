@@ -42,17 +42,26 @@ def prepare_data_and_traj(
         )
     else:
         raise ValueError("Manual trajectory import not implemented yet.")
-    data_dis, traj_dis_x, traj_dis_y, traj_dis_z = recon_utils.remove_noise_rays(
+    indices_dis = recon_utils.remove_noise_rays(
         data=data_dis,
-        traj_x=traj_x,
-        traj_y=traj_y,
-        traj_z=traj_z,
     )
-    data_gas, traj_gas_x, traj_gas_y, traj_gas_z = recon_utils.remove_noise_rays(
+    indices_gas = recon_utils.remove_noise_rays(
+        data=data_gas,
+    )
+    indices = np.logical_and(indices_dis, indices_gas)
+    data_gas, traj_gas_x, traj_gas_y, traj_gas_z = recon_utils.apply_indices_mask(
         data=data_gas,
         traj_x=traj_x,
         traj_y=traj_y,
         traj_z=traj_z,
+        indices=indices,
+    )
+    data_dis, traj_dis_x, traj_dis_y, traj_dis_z = recon_utils.apply_indices_mask(
+        data=data_dis,
+        traj_x=traj_x,
+        traj_y=traj_y,
+        traj_z=traj_z,
+        indices=indices,
     )
     traj_dis = np.stack([traj_dis_x, traj_dis_y, traj_dis_z], axis=-1)
     traj_gas = np.stack([traj_gas_x, traj_gas_y, traj_gas_z], axis=-1)
@@ -64,7 +73,7 @@ def prepare_data_and_traj_keyhole(
     data: np.ndarray,
     traj: np.ndarray,
     bin_indices: np.ndarray,
-    key_radius: int = 10,
+    key_radius: int = 9,
 ):
     """Prepare data and trajectory for keyhole reconstruction.
 
@@ -81,13 +90,13 @@ def prepare_data_and_traj_keyhole(
         The trajectory is flattened to a 2D array of shape (K, 3)
     """
     data_copy = data.copy()
+    data = data.copy()
     data[:, 0:key_radius] = 0.0
     normalization = (
         np.mean(np.abs(data_copy[bin_indices, 0])) * 1 / np.abs(data_copy[:, 0])
     )
     data = np.divide(data, np.expand_dims(normalization, -1))
     data[bin_indices, 0:key_radius] = data_copy[bin_indices, 0:key_radius]
-
     return np.delete(
         recon_utils.flatten_data(data), np.where(data.flatten() == 0.0), axis=0
     ), np.delete(

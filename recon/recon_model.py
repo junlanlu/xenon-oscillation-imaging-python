@@ -1,4 +1,6 @@
+"""Reconstruction models."""
 import logging
+import pdb
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -6,7 +8,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 sys.path.append("..")
-from recon import dcf, kernel, sparse_gridding_distance, system_model
+
+from recon import dcf, system_model
 from utils import constants
 
 
@@ -99,14 +102,16 @@ class LSQgridded(GriddedReconModel):
         reconVol = self.grid(data)
         if self.verbosity:
             logging.info("-- Finished Gridding.")
-
+        # pdb.set_trace()
         reconVol = np.reshape(reconVol, np.ceil(self.system_obj.full_size).astype(int))
         if self.verbosity:
             logging.info("-- Calculating IFFT ...")
         time_start = time.time()
-        reconVol = np.fft.ifftshift(reconVol)
-        reconVol = np.fft.ifftn(reconVol)
-        reconVol = np.fft.ifftshift(reconVol)
+        # reconVol = np.fft.ifftshift(reconVol)
+        # reconVol = np.fft.ifftn(reconVol)
+        # reconVol = np.fft.ifftshift(reconVol)
+        # pdb.set_trace()
+        reconVol = np.fft.fftshift(np.fft.ifftn(reconVol))
         time_end = time.time()
         logging.info("The runtime for iFFT: " + str(time_end - time_start))
         if self.verbosity:
@@ -116,7 +121,7 @@ class LSQgridded(GriddedReconModel):
         if self.deapodize:
             if self.verbosity:
                 logging.info("-- Calculating k-space deapodization function")
-            deapVol = self.grid(~np.any(traj, axis=1).astype(float))
+            deapVol = self.grid(~np.any(traj, axis=1)).astype(np.float32)
             deapVol = np.reshape(deapVol, np.ceil(self.system_obj.full_size))
             if self.verbosity:
                 logging.info("-- Calculating image-space deapodization function")
@@ -125,7 +130,6 @@ class LSQgridded(GriddedReconModel):
             if self.crop:
                 deapVol = self.system_obj.crop(deapVol)
             reconVol = np.divide(reconVol, deapVol)
-            del deapVol
             if self.verbosity:
                 logging.info("-- Finished deapodization.")
         if self.verbosity:

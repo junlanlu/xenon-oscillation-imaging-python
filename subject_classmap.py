@@ -5,10 +5,14 @@ import logging
 import os
 import pdb
 
+import matplotlib
 import nibabel as nib
 import numpy as np
 import scipy.io as sio
 from ml_collections import config_dict
+
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
 
 import oscillation_binning as ob
 import preprocessing
@@ -22,6 +26,7 @@ from utils import (
     metrics,
     recon_utils,
     spect_utils,
+    traj_utils,
 )
 
 
@@ -37,7 +42,7 @@ class Subject(object):
         """Init object."""
         logging.info("Initializing oscillation imaging subject.")
         self.config = config
-        self.data_dis = np.array([])
+        self.data_dissolved = np.array([])
         self.data_dis_high = np.array([])
         self.data_dis_low = np.array([])
         self.data_gas = np.array([])
@@ -56,7 +61,7 @@ class Subject(object):
         self.mask = np.array([0.0])
         self.rbc_m_ratio = 0.0
         self.segmentation_key = str(config.segmentation_key)
-        self.traj_dis = np.array([])
+        self.traj_dissolved = np.array([])
         self.traj_dis_high = np.array([])
         self.traj_dis_low = np.array([])
         self.traj_gas = np.array([])
@@ -99,7 +104,10 @@ class Subject(object):
         return
 
     def preprocess(self):
-        """Prepare data and trajectory for reconstruction."""
+        """Prepare data and trajectory for reconstruction.
+
+        Also, calculates the scaling factor for the trajectory.
+        """
         (
             self.data_dissolved,
             self.traj_dissolved,
@@ -112,12 +120,25 @@ class Subject(object):
             n_skip_start=int(self.config.recon.n_skip_start),
             n_skip_end=int(self.config.recon.n_skip_end),
         )
+        self.data_gas, self.traj_gas = preprocessing.truncate_data_and_traj(
+            self.data_gas,
+            self.traj_gas,
+            n_skip_start=int(self.config.recon.n_skip_start),
+            n_skip_end=int(self.config.recon.n_skip_end),
+        )
+        self.traj_scaling_factor = traj_utils.get_scaling_factor(
+            recon_size=int(self.config.recon.recon_size),
+            n_points=self.data_gas.shape[1],
+            scale=True,
+        )
+        self.traj_dissolved *= self.traj_scaling_factor
+        self.traj_gas *= self.traj_scaling_factor
 
     def reconstruction_gas(self):
         """Reconstruct the gas phase image."""
         self.image_gas = reconstruction.reconstruct(
             data=recon_utils.flatten_data(self.data_gas),
-            traj=recon_utils.flatten_traj(self.traj_gas),
+            traj=self.traj_scaling_factor * recon_utils.flatten_traj(self.traj_gas),
             kernel_sharpness=0.32,
         )
 
@@ -125,7 +146,8 @@ class Subject(object):
         """Reconstruct the dissolved phase image."""
         self.image_dissolved = reconstruction.reconstruct(
             data=recon_utils.flatten_data(self.data_dissolved),
-            traj=recon_utils.flatten_traj(self.traj_dissolved),
+            traj=self.traj_scaling_factor
+            * recon_utils.flatten_traj(self.traj_dissolved),
             kernel_sharpness=0.14,
         )
         self.image_rbc, self.image_membrane = img_utils.dixon_decomposition(
@@ -137,39 +159,68 @@ class Subject(object):
 
     def reconstruction_rbc_oscillation(self):
         """Reconstruct the RBC oscillation image."""
-        self.high_indices, self.low_indices = ob.bin_rbc_oscillations(
+        (
+            self.data_rbc_k0,
+            self.high_indices,
+            self.low_indices,
+            self.rbc_m_ratio_high,
+            self.rbc_m_ratio_low,
+        ) = ob.bin_rbc_oscillations(
             data_gas=self.data_gas,
-            data_dis=self.data_dis,
+            data_dissolved=self.data_dissolved,
             rbc_m_ratio=self.rbc_m_ratio,
             TR=self.dict_dis[constants.IOFields.TR],
         )
         data_dis_high, traj_dis_high = preprocessing.prepare_data_and_traj_keyhole(
-            self.data_dis, self.traj_dis, self.high_indices
+            self.data_dissolved,
+            self.traj_dissolved,
+            self.high_indices,
         )
         data_dis_low, traj_dis_low = preprocessing.prepare_data_and_traj_keyhole(
-            self.data_dis, self.traj_dis, self.low_indices
+            self.data_dissolved,
+            self.traj_dissolved,
+            self.low_indices,
         )
         image_dissolved_high = reconstruction.reconstruct(
-            data=data_dis_high, traj=traj_dis_high, kernel_sharpness=0.14
+            data=data_dis_high,
+            traj=self.traj_scaling_factor * traj_dis_high,
+            kernel_sharpness=0.14,
         )
         image_dissolved_low = reconstruction.reconstruct(
-            data=data_dis_low, traj=traj_dis_low, kernel_sharpness=0.14
+            data=data_dis_low,
+            traj=self.traj_scaling_factor * traj_dis_low,
+            kernel_sharpness=0.14,
         )
         self.image_rbc_high, _ = img_utils.dixon_decomposition(
             image_gas=self.image_gas,
             image_dissolved=image_dissolved_high,
             mask=self.mask,
-            rbc_m_ratio=self.rbc_m_ratio,
+            rbc_m_ratio=self.rbc_m_ratio_high,
         )
         self.image_rbc_low, _ = img_utils.dixon_decomposition(
             image_gas=self.image_gas,
             image_dissolved=image_dissolved_low,
             mask=self.mask,
-            rbc_m_ratio=self.rbc_m_ratio,
+            rbc_m_ratio=self.rbc_m_ratio_low,
         )
+
         self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
-            self.image_rbc_high, self.image_rbc_low, self.image_rbc
+            self.image_rbc_high, self.image_rbc_low, self.image_rbc, self.mask
         )
+        io_utils.export_nii(np.abs(image_dissolved_high), "tmp/dissolved_high.nii")
+        io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
+        io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
+        io_utils.export_nii(np.abs(self.image_rbc_high), "tmp/rbc_high.nii")
+        io_utils.export_nii(np.abs(self.image_rbc_low), "tmp/rbc_low.nii")
+        io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
+        io_utils.export_nii(np.abs(self.image_rbc_osc), "tmp/rbc_osc.nii")
+        t = np.arange(0, self.data_gas.shape[0])
+        # plt.plot(t, self.data_rbc_k0)
+        # plt.plot(t[self.high_indices], self.data_rbc_k0[self.high_indices], "ro")
+        # plt.plot(t[self.low_indices], self.data_rbc_k0[self.low_indices], "bo")
+        plt.hist(100 * self.image_rbc_osc[self.mask > 0].flatten(), bins=50)
+        plt.show()
+        pdb.set_trace()
 
     def segmentation(self):
         """Segment the thoracic cavity."""

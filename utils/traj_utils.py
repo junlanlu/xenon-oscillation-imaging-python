@@ -417,14 +417,16 @@ def generate_trajectory(
     y = traj_angular[n_frames : 2 * n_frames]
     z = traj_angular[2 * n_frames : 3 * n_frames]
 
-    x = np.array([radial_distance_x]).transpose().dot(np.array([x])).transpose()
-    y = np.array([radial_distance_y]).transpose().dot(np.array([y])).transpose()
-    z = np.array([radial_distance_z]).transpose().dot(np.array([z])).transpose()
+    x = 0.5 * np.array([radial_distance_x]).transpose().dot(np.array([x])).transpose()
+    y = 0.5 * np.array([radial_distance_y]).transpose().dot(np.array([y])).transpose()
+    z = 0.5 * np.array([radial_distance_z]).transpose().dot(np.array([z])).transpose()
 
     return x, y, z
 
 
-def get_scaling_factor(recon_size: float = 128, n_points: float = 64) -> float:
+def get_scaling_factor(
+    recon_size: float = 128, n_points: float = 64, scale: bool = False
+) -> float:
     """Get the scaling factor for the trajectory.
 
     The scaling factor is used to scale the trajectory to the reconstruction size.
@@ -434,11 +436,13 @@ def get_scaling_factor(recon_size: float = 128, n_points: float = 64) -> float:
         recon_size (int): target reconstructed image size in number of voxels in each
             dimension.
         n_points (int): Number of points on each radial projection.
-
+        scale (bool): Whether to scale the trajectory at all. Otherwise return 1.
+            An example of when this is useful is when the trajectory is already
+            imported and scaled.
     Returns:
         (float) The scaling factor.
     """
-    return 0.5 * n_points / recon_size
+    return n_points / recon_size if not scale else 1
 
 
 def main(argv):
