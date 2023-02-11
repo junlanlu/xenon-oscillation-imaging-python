@@ -131,7 +131,7 @@ def calculate_static_spectroscopy(
     t_tr = np.array(range(0, np.shape(fid)[1])) * tr
 
     start_ind, _ = get_breathhold_indices(t=t_tr, start_time=2, end_time=10)
-
+    start_ind = 132
     # calculate number of FIDs to average
     if n_avg:
         n_avg = n_avg
@@ -140,7 +140,7 @@ def calculate_static_spectroscopy(
 
     end_ind = np.min([len(fid[0, :]) - 1, start_ind + n_avg + 1])
     data_dis_avg = np.average(fid[:, start_ind:end_ind], axis=1)
-    disFit = fit.NMR_TimeFit(
+    fit_obj = fit.NMR_TimeFit(
         ydata=data_dis_avg,
         tdata=t,
         area=get_area_guess(
@@ -175,8 +175,8 @@ def calculate_static_spectroscopy(
         )
     ).flatten()
     bounds = (lb, ub)
-    disFit.fit_time_signal_residual(bounds=bounds)
+    fit_obj.fit_time_signal_residual(bounds=bounds)
     if plot:
-        disFit.plot_time_spect_fit()
-    rbc_m_ratio = disFit.area[0] / np.sum(disFit.area[1])
+        fit_obj.plot_time_spect_fit()
+    rbc_m_ratio = fit_obj.area[0] / np.sum(fit_obj.area[1])
     return rbc_m_ratio

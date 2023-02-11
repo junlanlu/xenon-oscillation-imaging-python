@@ -3,8 +3,9 @@ import logging
 import pdb
 
 from absl import app, flags
-from ml_collections import config_dict, config_flags
+from ml_collections import config_flags
 
+from config import base_config
 from subject_classmap import Subject
 
 FLAGS = flags.FLAGS
@@ -12,7 +13,7 @@ FLAGS = flags.FLAGS
 _CONFIG = config_flags.DEFINE_config_file("config", None, "config file.")
 
 
-def oscillation_mapping_reconstruction(config: config_dict.ConfigDict):
+def oscillation_mapping_reconstruction(config: base_config.Config):
     """Run the 2D ventilation pipeline.
 
     Args:
@@ -25,11 +26,16 @@ def oscillation_mapping_reconstruction(config: config_dict.ConfigDict):
     logging.info("Reconstructing images")
     subject.preprocess()
     subject.reconstruction_gas()
-    subject.segmentation()
     subject.reconstruction_dissolved()
     subject.reconstruction_rbc_oscillation()
-    logging.info("Segmenting Proton Mask")
     subject.segmentation()
+    subject.dixon_decomposition()
+    subject.dissolved_analysis()
+    subject.dissolved_binning()
+    subject.oscillation_analysis()
+    subject.oscillation_binning()
+    logging.info("Segmenting Proton Mask")
+    subject.get_statistics()
     subject.savefiles()
     logging.info("Complete")
 

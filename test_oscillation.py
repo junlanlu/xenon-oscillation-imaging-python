@@ -13,18 +13,18 @@ from utils import img_utils, io_utils, recon_utils
 
 
 def main(argv):
-    mat_data = io_utils.import_mat("tmp/subject.mat")
+    mat_dict = io_utils.import_mat("tmp/subject.mat")
 
-    data_dis_high = mat_data["data_dis_highkey"].T
-    data_dis_low = mat_data["data_dis_lowkey"].T
-    data_gas = np.conjugate(mat_data["data_gas"])
-    data_dis = recon_utils.flatten_data(np.conjugate(mat_data["data_dis_tot"]).T)
+    data_dis_high = mat_dict["data_dis_highkey"].T
+    data_dis_low = mat_dict["data_dis_lowkey"].T
+    data_gas = np.conjugate(mat_dict["data_gas"])
+    data_dis = recon_utils.flatten_data(np.conjugate(mat_dict["data_dis_tot"]).T)
     # image_gas = mat_data["Gas_Image"]
     # image_rbc = mat_data["RBC_Tot"]
-    traj_dis_low = mat_data["traj_dis_lowkey"]
-    traj_gas = mat_data["traj_gas"]
-    traj_dis_high = mat_data["traj_dis_highkey"]
-    traj_dis = mat_data["traj_dis_keyhole"]
+    traj_dis_low = mat_dict["traj_dis_lowkey"]
+    traj_gas = mat_dict["traj_gas"]
+    traj_dis_high = mat_dict["traj_dis_highkey"]
+    traj_dis = mat_dict["traj_dis_keyhole"]
     image_gas = reconstruction.reconstruct(
         data=data_gas, traj=traj_gas, kernel_sharpness=0.25, kernel_extent=0.25 * 9
     )
@@ -74,7 +74,7 @@ def main(argv):
     io_utils.export_nii(image_gas, "tmp/gas.nii")
     io_utils.export_nii(image_dissolved, "tmp/dissolved.nii")
     # plt.hist(100 * image_rbc_osc[mask > 0].flatten(), 50)
-    plt.hist(1e8 * image_rbc_high[mask > 0].flatten(), 50)
+    plt.hist(image_rbc_osc[mask > 0].flatten(), 50)
     # plt.xlim(-10, 30)
     plt.show()
     pdb.set_trace()

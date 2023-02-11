@@ -104,12 +104,12 @@ def prepare_data_and_traj_keyhole(
     )
 
 
-def normalize_data(data: np.ndarray, normalization: np.ndarray) -> np.ndarray:
-    """Normalize data by a given normalization array.
+def rescale_data(data: np.ndarray, normalization: np.ndarray) -> np.ndarray:
+    """Rescale data by a normalization array.
 
     Args:
         data: data FIDs of shape (n_projections, n_points)
-        normalization: normalization array of shape (n_projections,)
+        normalization: array of shape (n_projections, ) to divide data by.
     """
     return np.divide(data, np.expand_dims(normalization, -1))
 

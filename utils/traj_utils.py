@@ -442,7 +442,7 @@ def get_scaling_factor(
     Returns:
         (float) The scaling factor.
     """
-    return n_points / recon_size if not scale else 1
+    return n_points / recon_size if scale else 1
 
 
 def main(argv):

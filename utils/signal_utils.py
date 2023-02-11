@@ -109,7 +109,10 @@ def get_heartrate(data: np.ndarray, ts: float) -> float:
 
 
 def find_high_low_indices(
-    data: np.ndarray, peak_distance: int, distance_threshold: float = 0.2
+    data: np.ndarray,
+    peak_distance: int,
+    distance_threshold: float = 0.2,
+    same_length: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Find indices of high and low signal bins.
 
@@ -119,6 +122,7 @@ def find_high_low_indices(
         distance_threshold (float): threshold for neighbouring peaks. Defaults to 0.2.
             Value must be between 0 and 1 with 0 being taking only the found peaks and 1
             being taking all points between the peaks.
+        same_length (bool): whether to force high and low bins are of the same length.
 
     Returns:
         Tuple of indices of high and low signal bins respectively.
@@ -135,6 +139,15 @@ def find_high_low_indices(
         high_indices = np.append(high_indices, np.arange(peak - left, peak + right))
     for peak in low_peaks:
         low_indices = np.append(low_indices, np.arange(peak - left, peak + right))
+
+    # remove indices that go are below zero and above length of the data
+    high_indices = np.delete(high_indices, np.argwhere(high_indices < 0))
+    low_indices = np.delete(low_indices, np.argwhere(low_indices < 0))
     high_indices = np.delete(high_indices, np.argwhere(high_indices >= len(data)))
     low_indices = np.delete(low_indices, np.argwhere(low_indices >= len(data)))
+    if same_length:
+        if len(high_indices) > len(low_indices):
+            high_indices = high_indices[: len(low_indices)]
+        elif len(low_indices) > len(high_indices):
+            low_indices = low_indices[: len(high_indices)]
     return np.sort(high_indices).astype(int), np.sort(low_indices).astype(int)

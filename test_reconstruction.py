@@ -3,7 +3,7 @@ import pdb
 import numpy as np
 from absl import app
 
-import preprocessing
+import pp
 import reconstruction
 from utils import img_utils, io_utils, recon_utils, traj_utils
 
@@ -21,8 +21,8 @@ def test_reconstruction(twix_path: str):
         traj_dis,
         data_gas,
         traj_gas,
-    ) = preprocessing.prepare_data_and_traj(out_dict)
-    data_gas, traj_gas = preprocessing.truncate_data_and_traj(data_gas, traj_gas)
+    ) = pp.prepare_data_and_traj(out_dict)
+    data_gas, traj_gas = pp.truncate_data_and_traj(data_gas, traj_gas)
     pdb.set_trace()
     image_gas = reconstruction.reconstruct(
         data=recon_utils.flatten_data(data_gas),

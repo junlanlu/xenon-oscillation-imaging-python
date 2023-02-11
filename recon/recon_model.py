@@ -102,15 +102,10 @@ class LSQgridded(GriddedReconModel):
         reconVol = self.grid(data)
         if self.verbosity:
             logging.info("-- Finished Gridding.")
-        # pdb.set_trace()
         reconVol = np.reshape(reconVol, np.ceil(self.system_obj.full_size).astype(int))
         if self.verbosity:
             logging.info("-- Calculating IFFT ...")
         time_start = time.time()
-        # reconVol = np.fft.ifftshift(reconVol)
-        # reconVol = np.fft.ifftn(reconVol)
-        # reconVol = np.fft.ifftshift(reconVol)
-        # pdb.set_trace()
         reconVol = np.fft.fftshift(np.fft.ifftn(reconVol))
         time_end = time.time()
         logging.info("The runtime for iFFT: " + str(time_end - time_start))

@@ -6,7 +6,7 @@ import sys
 import cv2
 
 sys.path.append("..")
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import scipy
@@ -109,6 +109,30 @@ def erode_image(image: np.ndarray, erosion: int) -> np.ndarray:
     return image
 
 
+def divide_images(
+    image1: np.ndarray, image2: np.ndarray, mask: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """Divide image1 by image2 inside the masked region.
+
+    Sets negative values to 0.
+
+    Args:
+        image1 (np.ndarray): image to divide.
+        image2 (np.ndarray): image to divide by.
+        mask (np.ndarray, optional): boolean mask to apply to the image. Defaults to None.
+    Returns:
+        Divided image.
+    """
+    out = np.zeros_like(image1)
+    if isinstance(mask, np.ndarray):
+        out[mask] = np.divide(image1[mask], image2[mask])
+    else:
+        out = np.divide(image1, image2)
+    # set negative values to 0
+    out[out < 0] = 0
+    return out
+
+
 def correct_B0(
     image: np.ndarray, mask: np.ndarray, max_iterations: int = 20
 ) -> np.ndarray:
@@ -154,7 +178,7 @@ def dixon_decomposition(
         mask (np.ndarray): boolean mask of the lung. must be the same size as the images.
         rbc_m_ratio (float): RBC:m ratio
     Returns:
-        Tuple of decomposed RBC and membrane images.
+        Tuple of decomposed RBC and membrane images respectively.
     """
     desired_angle = np.arctan2(rbc_m_ratio, 1.0)
     total_dissolved = np.sum(image_dissolved[mask > 0])
@@ -165,7 +189,7 @@ def dixon_decomposition(
 
     diffphase = -correct_B0(image_gas, mask)
     rotVol_B = np.multiply(rotVol, np.exp(1j * diffphase))
-    return np.imag(rotVol_B), np.real(rotVol_B)
+    return np.real(rotVol_B), np.imag(rotVol_B)
 
 
 def calculate_rbc_oscillation(
@@ -187,8 +211,10 @@ def calculate_rbc_oscillation(
     image_total = image_total.copy()
     image_total[mask == 0] = np.max(image_total[mask > 0])
     if method == constants.Methods.ELEMENTWISE:
-        return (image_high - image_low) / image_total
+        return np.subtract(image_high, image_low) / image_total
     elif method == constants.Methods.MEAN:
-        return (image_high - image_low) / np.abs(np.mean(image_total[mask > 0]))
+        return np.subtract(image_high, image_low) / np.abs(
+            np.mean(image_total[mask > 0])
+        )
     else:
         raise ValueError("Invalid method: {}.".format(method))

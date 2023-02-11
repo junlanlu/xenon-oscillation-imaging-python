@@ -4,7 +4,7 @@ import pdb
 import numpy as np
 from absl import app
 
-import preprocessing
+import pp
 import reconstruction
 from utils import constants, io_utils, spect_utils, traj_utils
 
@@ -16,11 +16,9 @@ RECON_IMAGE_SIZE = 128
 
 def test_preprocessing(twix_path: str):
     out_dict = io_utils.read_dis_twix(twix_path)
-    data_dis, traj_dis, data_gas, traj_gas = preprocessing.prepare_data_and_traj(
-        out_dict
-    )
+    data_dis, traj_dis, data_gas, traj_gas = pp.prepare_data_and_traj(out_dict)
     bin_indices = np.arange(0, data_dis.shape[0], 10)
-    data, traj = preprocessing.prepare_data_and_traj_keyhole(
+    data, traj = pp.prepare_data_and_traj_keyhole(
         data_dis,
         traj_dis,
         bin_indices,

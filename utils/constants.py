@@ -1,9 +1,7 @@
 """Define important constants used throughout the pipeline."""
 import enum
 
-_FOVDIMSCALE = 10
-_FOVINFLATIONSCALE2D = 10000.0
-_FOVINFLATIONSCALE3D = 1000.0
+FOVINFLATIONSCALE3D = 1000.0
 
 _NUM_SLICE_GRE_MONTAGE = 14
 _NUM_ROWS_GRE_MONTAGE = 2
@@ -176,22 +174,21 @@ class Methods(object):
     MEAN = "mean"
 
 
-class STATSIOFields(object):
+class StatsIOFields(object):
     """Statistic IO Fields."""
 
     SUBJECT_ID = "subject_id"
-    VEN_DEFECT = "ven_defect"
-    VEN_LOW = "ven_low"
-    VEN_HIGH = "ven_high"
-    VEN_CV = "ven_cv"
-    VEN_SKEW = "ven_skewness"
-    VEN_SNR = "ven_snr"
     INFLATION = "inflation"
-    VEN_MEDIAN = "ven_median"
-    VEN_MEAN = "ven_mean"
-    VEN_STD = "ven_std"
     SCAN_DATE = "scan_date"
     PROCESS_DATE = "process_date"
+    SNR_RBC_LOW = "snr_rbc_low"
+    SNR_RBC_HIGH = "snr_rbc_high"
+    SNR_RBC = "snr_rbc"
+    PCT_OSC_DEFECT = "osc_defect"
+    PCT_OSC_LOW = "osc_low"
+    PCT_OSC_DEFECTLOW = "osc_defectlow"
+    PCT_OSC_NORMAL = "osc_normal"
+    PCT_OSC_HIGH = "osc_high"
 
 
 class VENHISTOGRAMFields(object):

@@ -1,9 +1,14 @@
 """Metrics for evaluating images."""
 
 import math
+import sys
+from datetime import datetime
 
+sys.path.append("..")
 import numpy as np
 from scipy.ndimage.morphology import binary_dilation
+
+from utils import constants
 
 
 def _get_dilation_kernel(x: int) -> int:
@@ -64,3 +69,40 @@ def snr(image: np.ndarray, mask: np.ndarray, window_size: int = 8):
 
     SNR = image_signal / image_noise
     return SNR, SNR * 0.66
+
+
+def inflation_volume(mask: np.ndarray, fov: float) -> float:
+    """Calculate the inflation volume of isotropic 3D image.
+
+    Args:
+        mask: np.ndarray thoracic cavity mask.
+        fov: float field of view in cm
+    Returns:
+        Inflation volume in L.
+    """
+    return (
+        np.sum(mask) * fov**3 / np.shape(mask)[0] ** 3
+    ) / constants.FOVINFLATIONSCALE3D
+
+
+def process_date() -> str:
+    """Return the current date in YYYY-MM-DD format."""
+    now = datetime.now()
+    return now.strftime("%Y-%m-%d")
+
+
+def bin_percentage(image: np.ndarray, bins: np.ndarray) -> float:
+    """Get the percentage of voxels in the given bins.
+
+    Args:
+        image: np.ndarray binned image. Assumes that the values in the image are
+            integers representing the bin number. Bin 0 is the region outside the mask
+            and Bin 1 is the lowest bin, etc.
+        bins: np.ndarray list of bins to include in the percentage calculation.
+    """
+    return np.sum(np.isin(image, bins)) / np.sum(image > 0)
+
+
+def mean_oscillation_percentage(image: np.ndarray, mask: np.ndarray) -> float:
+    """Get the mean oscillation percentage of the image."""
+    return np.mean(image[mask])
