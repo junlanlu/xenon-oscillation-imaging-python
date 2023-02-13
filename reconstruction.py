@@ -59,6 +59,7 @@ def reconstruct(
         system_obj=system_obj, dcf_obj=dcf_obj, verbosity=verbosity
     )
     image = recon_obj.reconstruct(data=data, traj=traj)
+    del recon_obj, dcf_obj, system_obj, prox_obj
     return image
 
 

@@ -28,7 +28,7 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
     subject.reconstruction_gas()
     subject.reconstruction_dissolved()
     subject.reconstruction_rbc_oscillation()
-    subject.segmentation()
+    # subject.segmentation()
     subject.dixon_decomposition()
     subject.dissolved_analysis()
     subject.dissolved_binning()

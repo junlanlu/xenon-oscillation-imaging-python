@@ -19,8 +19,16 @@ import oscillation_binning as ob
 import preprocessing as pp
 import reconstruction
 import segmentation
-from utils import (binning, constants, img_utils, io_utils, metrics,
-                   recon_utils, spect_utils, traj_utils)
+from utils import (
+    binning,
+    constants,
+    img_utils,
+    io_utils,
+    metrics,
+    recon_utils,
+    spect_utils,
+    traj_utils,
+)
 
 
 class Subject(object):
@@ -131,21 +139,43 @@ class Subject(object):
     def reconstruction_gas(self):
         """Reconstruct the gas phase image."""
         self.image_gas = reconstruction.reconstruct(
-            data=recon_utils.flatten_data(self.data_gas),
+            data=(recon_utils.flatten_data(self.data_gas)),
             traj=recon_utils.flatten_traj(self.traj_gas),
             kernel_sharpness=float(self.config.recon.kernel_sharpness_lr),
+            kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
+        )
+        self.image_gas = img_utils.flip_and_rotate_image(
+            self.image_gas, orientation=constants.Orientation.CORONAL
         )
 
     def reconstruction_dissolved(self):
         """Reconstruct the dissolved phase image."""
-        self.image_dissolved = reconstruction.reconstruct(
-            data=recon_utils.flatten_data(self.data_dissolved),
+        # divide the data by the gas phase k0 data.
+        self.data_dissolved_norm = pp.normalize_data(
+            data=self.data_dissolved, normalization=np.abs(self.data_gas[:, 0])
+        )
+        self.image_dissolved_norm = reconstruction.reconstruct(
+            data=(recon_utils.flatten_data(self.data_dissolved_norm)),
             traj=recon_utils.flatten_traj(self.traj_dissolved),
             kernel_sharpness=float(self.config.recon.kernel_sharpness_lr),
+            kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
+        )
+        self.image_dissolved = reconstruction.reconstruct(
+            data=(recon_utils.flatten_data(self.data_dissolved)),
+            traj=recon_utils.flatten_traj(self.traj_dissolved),
+            kernel_sharpness=float(self.config.recon.kernel_sharpness_lr),
+            kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
+        )
+        self.image_dissolved_norm = img_utils.flip_and_rotate_image(
+            self.image_dissolved_norm, orientation=constants.Orientation.CORONAL
+        )
+        self.image_dissolvedm = img_utils.flip_and_rotate_image(
+            self.image_dissolved, orientation=constants.Orientation.CORONAL
         )
 
     def reconstruction_rbc_oscillation(self):
         """Reconstruct the RBC oscillation image."""
+        # bin rbc oscillations
         (
             self.data_rbc_k0,
             self.high_indices,
@@ -158,32 +188,84 @@ class Subject(object):
             rbc_m_ratio=self.rbc_m_ratio,
             TR=self.dict_dis[constants.IOFields.TR],
         )
+        # TODO remove these lines
+        mat_dict = io_utils.import_mat("tmp/indices.mat")
+        # self.high_indices = mat_dict["High_Bin_Index"]
+        # self.low_indices = mat_dict["Low_Bin_Index"]
+        mat_dict = io_utils.import_mat("tmp/subject.mat")
+        mask_mat = mat_dict["protonMask"]
+        self.mask = np.rot90(np.rot90(mask_mat, 3, axes=(0, 2)), 1, axes=(0, 1))
+        self.mask = img_utils.flip_and_rotate_image(self.mask)
+        self.mask = np.flip(self.mask, axis=1).astype(bool)
+        image_rbc_mat = mat_dict["RBC_Tot"]
+        image_rbc_mat = np.rot90(
+            np.rot90(image_rbc_mat, 3, axes=(0, 2)), 1, axes=(0, 1)
+        )
+        image_rbc_mat = img_utils.flip_and_rotate_image(image_rbc_mat)
+        image_rbc_mat = np.flip(image_rbc_mat, axis=1)
+        io_utils.export_nii(np.abs(image_rbc_mat), "tmp/rbc_mat.nii")
+        # TODO remove above lines
+        # prepare data and traj for reconstruction
         data_dis_high, traj_dis_high = pp.prepare_data_and_traj_keyhole(
-            data=self.data_dissolved,
+            data=self.data_dissolved_norm,
             traj=self.traj_dissolved,
             bin_indices=self.high_indices,
         )
         data_dis_low, traj_dis_low = pp.prepare_data_and_traj_keyhole(
-            data=self.data_dissolved,
+            data=self.data_dissolved_norm,
             traj=self.traj_dissolved,
             bin_indices=self.low_indices,
         )
+        # reconstruct data
         self.image_dissolved_high = reconstruction.reconstruct(
             data=data_dis_high,
             traj=traj_dis_high,
             kernel_sharpness=float(self.config.recon.kernel_sharpness_lr),
+            kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
         )
         self.image_dissolved_low = reconstruction.reconstruct(
             data=data_dis_low,
             traj=traj_dis_low,
             kernel_sharpness=float(self.config.recon.kernel_sharpness_lr),
+            kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
         )
+        # flip and rotate images
+        self.image_dissolved_high = img_utils.flip_and_rotate_image(
+            self.image_dissolved_high, orientation=constants.Orientation.CORONAL
+        )
+        self.image_dissolved_low = img_utils.flip_and_rotate_image(
+            self.image_dissolved_low, orientation=constants.Orientation.CORONAL
+        )
+
+    def segmentation(self):
+        """Segment the thoracic cavity."""
+        if self.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
+            logging.info("Performing neural network segmenation.")
+            self.mask = segmentation.predict(self.image_gas, erosion=3)
+        elif self.segmentation_key == constants.SegmentationKey.SKIP.value:
+            self.mask = np.ones_like(self.image_gas)
+        elif self.segmentation_key == constants.SegmentationKey.MANUAL_VENT.value:
+            logging.info("loading mask file specified by the user.")
+            try:
+                mask = glob.glob(self.manual_segmentation_filepath)[0]
+                self.mask = np.squeeze(np.array(nib.load(mask).get_fdata()))
+            except ValueError:
+                logging.error("Invalid mask nifti file.")
+        else:
+            raise ValueError("Invalid segmentation key.")
+        self.mask = img_utils.flip_and_rotate_image(self.mask)
 
     def dixon_decomposition(self):
         """Perform Dixon decomposition on the dissolved-phase images."""
         self.image_rbc, self.image_membrane = img_utils.dixon_decomposition(
             image_gas=self.image_gas,
             image_dissolved=self.image_dissolved,
+            mask=self.mask,
+            rbc_m_ratio=self.rbc_m_ratio,
+        )
+        self.image_rbc_norm, _ = img_utils.dixon_decomposition(
+            image_gas=self.image_gas,
+            image_dissolved=self.image_dissolved_norm,
             mask=self.mask,
             rbc_m_ratio=self.rbc_m_ratio,
         )
@@ -206,60 +288,20 @@ class Subject(object):
             image1=self.image_rbc, image2=np.abs(self.image_gas), mask=self.mask
         )
 
-    def oscillation_analysis(self):
-        """Calculate the oscillation image from the rbc high, low, and normal images."""
-        # calculate the mask for the RBC image with sufficient SNR, excluding defects
-        self.mask_rbc = np.logical_and(self.mask, self.image_rbc_binned > 1)
-        self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
-            self.image_rbc_high, self.image_rbc_low, self.image_rbc, self.mask_rbc
-        )
-        io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
-        io_utils.export_nii(self.image_gas, "tmp/gas.nii")
-        io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
-        io_utils.export_nii(np.abs(self.image_membrane), "tmp/membrane.nii")
-        io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
-        io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
-        io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
-        # plt.hist(self.image_rbc2gas[self.mask > 0].flatten(), 50)
-        plt.hist(self.image_rbc_osc[self.mask_rbc > 0].flatten(), 50)
-        # plt.plot(self.data_rbc_k0)
-        # plt.xlim(-10, 30)
-        plt.show()
-        np.mean(self.image_rbc[self.mask]) / np.mean(np.abs(self.image_gas[self.mask]))
-        np.mean(self.image_membrane[self.mask]) / np.mean(
-            np.abs(self.image_gas[self.mask])
-        )
-        pdb.set_trace()
-        plt.figure()
-        t = np.arange(self.data_rbc_k0.shape[0])
-        plt.plot(t, self.data_rbc_k0, "k.")
-        plt.plot(t[self.high_indices], self.data_rbc_k0[self.high_indices], "r.")
-        plt.plot(t[self.low_indices], self.data_rbc_k0[self.low_indices], "b.")
-        plt.show()
-
-    def segmentation(self):
-        """Segment the thoracic cavity."""
-        if self.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
-            logging.info("Performing neural network segmenation.")
-            self.mask = segmentation.predict(self.image_gas)
-        elif self.segmentation_key == constants.SegmentationKey.SKIP.value:
-            self.mask = np.ones_like(self.image_gas)
-        elif self.segmentation_key == constants.SegmentationKey.MANUAL_VENT.value:
-            logging.info("loading mask file specified by the user.")
-            try:
-                mask = glob.glob(self.manual_segmentation_filepath)[0]
-                self.mask = np.squeeze(np.array(nib.load(mask).get_fdata()))
-            except ValueError:
-                logging.error("Invalid mask nifti file.")
-        else:
-            raise ValueError("Invalid segmentation key.")
-
     def dissolved_binning(self):
         """Bin dissolved images to colormap bins."""
         self.image_rbc_binned = binning.linear_bin(
             image=self.image_rbc2gas,
             mask=self.mask,
             thresholds=self.config.params.threshold_rbc,
+        )
+
+    def oscillation_analysis(self):
+        """Calculate the oscillation image from the rbc high, low, and normal images."""
+        # calculate the mask for the RBC image with sufficient SNR, excluding defects
+        self.mask_rbc = np.logical_and(self.mask, self.image_rbc_binned > 1)
+        self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
+            self.image_rbc_high, self.image_rbc_low, self.image_rbc_norm, self.mask
         )
 
     def oscillation_binning(self):
@@ -270,11 +312,35 @@ class Subject(object):
             thresholds=self.config.params.threshold_oscillation,
         )
         # set unanalyzed voxels to -1
-        self.image_rbc_osc_binned[np.logical_and(self.mask, ~self.mask_rbc)] = -1
+        # self.image_rbc_osc_binned[np.logical_and(self.mask, ~self.mask_rbc)] = -1
+        io_utils.export_nii(self.image_rbc_osc_binned, "tmp/osc_binned.nii")
+        io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
+        io_utils.export_nii(np.abs(self.image_gas), "tmp/gas.nii")
+        io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
+        io_utils.export_nii(np.abs(self.image_membrane), "tmp/membrane.nii")
+        io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
+        io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
+        io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
+        io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
+
+        pdb.set_trace()
+        # plt.hist(self.image_rbc2gas[self.mask > 0].flatten(), 50)
+        # plt.hist(self.image_rbc_osc[self.mask > 0].flatten(), 50)
+        # plt.plot(self.data_rbc_k0)
+        # plt.xlim(-10, 30)
+        # plt.show()
+        # pdb.set_trace()
+        # plt.figure()
+        # t = np.arange(self.data_rbc_k0.shape[0])
+        # plt.plot(t, self.data_rbc_k0, "k.")
+        # plt.plot(t[self.high_indices], self.data_rbc_k0[self.high_indices], "r.")
+        # plt.plot(t[self.low_indices], self.data_rbc_k0[self.low_indices], "b.")
+        # plt.show()
 
     def get_statistics(self):
         """Calculate image statistics."""
         self.stats_dict = {
+            constants.StatsIOFields.SUBJECT_ID: self.config.subject_id,
             constants.StatsIOFields.INFLATION: metrics.inflation_volume(
                 self.mask, self.dict_dis[constants.IOFields.FOV]
             ),

@@ -132,7 +132,9 @@ def truncate_data_and_traj(
         A tuple of data and trajectory arrays with beginning and end projections
         removed.
     """
+    shape_data = data.shape
+    shape_traj = traj.shape
     return (
-        data[n_skip_start : -(1 + n_skip_end)],
-        traj[n_skip_start : -(1 + n_skip_end)],
+        data[n_skip_start : shape_data[0] - (n_skip_end)],
+        traj[n_skip_start : shape_traj[0] - (n_skip_end)],
     )

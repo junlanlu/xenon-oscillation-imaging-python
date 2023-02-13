@@ -8,6 +8,10 @@ import cv2
 sys.path.append("..")
 from typing import Any, List, Optional, Tuple
 
+import matplotlib
+
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import skimage
@@ -71,9 +75,17 @@ def flip_and_rotate_image(
         Flipped and rotated image.
     """
     if orientation == constants.Orientation.CORONAL:
-        return flip_image_complex(image)
+        image = np.rot90(np.rot90(image, 3, axes=(1, 2)), 1, axes=(0, 2))
+        image = np.rot90(image, 1, axes=(0, 1))
+        image = np.flip(np.flip(image, axis=1), axis=2)
+        return image
     elif orientation == constants.Orientation.TRANSVERSE:
         return rotate_axial_to_coronal(flip_image_complex(image))
+    elif orientation == constants.Orientation.AXIAL:
+        image = np.rot90(np.rot90(image, 1, axes=(1, 2)), 3, axes=(0, 2))
+        image = np.rot90(image, 1, axes=(0, 1))
+        image = np.flip(image, axis=2)
+        return image
     else:
         raise ValueError("Invalid orientation: {}.".format(orientation))
 
@@ -134,7 +146,7 @@ def divide_images(
 
 
 def correct_B0(
-    image: np.ndarray, mask: np.ndarray, max_iterations: int = 20
+    image: np.ndarray, mask: np.ndarray, max_iterations: int = 100
 ) -> np.ndarray:
     """Correct B0 inhomogeneity.
 
@@ -145,17 +157,16 @@ def correct_B0(
     Returns:
         Corrected phase of the corrected image.
     """
-    iterCount = 0
+    index = 0
     meanphase = 1
 
     while abs(meanphase) > 1e-7:
-        iterCount = iterCount + 1
+        index = index + 1
         diffphase = np.angle(image)
         meanphase = np.mean(diffphase[mask])  # type: ignore
         image = np.multiply(image, np.exp(-1j * meanphase))
-        if iterCount > max_iterations:
+        if index > max_iterations:
             break
-
     return np.angle(image)  # type: ignore
 
 
@@ -180,16 +191,26 @@ def dixon_decomposition(
     Returns:
         Tuple of decomposed RBC and membrane images respectively.
     """
+    # correct for B0 inhomogeneity
+    diffphase = correct_B0(image_gas, mask)
+    image_dissolved_B0 = np.multiply(image_dissolved, np.exp(1j * -diffphase))
+    # calculate phase shift to separate RBC and membrane
     desired_angle = np.arctan2(rbc_m_ratio, 1.0)
-    total_dissolved = np.sum(image_dissolved[mask > 0])
-    current_angle = np.arctan2(np.imag(total_dissolved), np.real(total_dissolved))
+    current_angle = np.angle(np.sum(image_dissolved_B0[mask > 0]))
     delta_angle = desired_angle - current_angle
-
-    rotVol = np.multiply(image_dissolved, np.exp(1j * delta_angle))
-
-    diffphase = -correct_B0(image_gas, mask)
-    rotVol_B = np.multiply(rotVol, np.exp(1j * diffphase))
-    return np.real(rotVol_B), np.imag(rotVol_B)
+    image_dixon = np.multiply(image_dissolved, np.exp(1j * (delta_angle - diffphase)))
+    # separate RBC and membrane components
+    image_rbc = (
+        np.imag(image_dixon)
+        if np.mean(np.imag(image_dixon)[mask]) > 0
+        else -1 * np.imag(image_dixon)  # type: ignore
+    )
+    image_membrane = (
+        np.real(image_dixon)
+        if np.mean(np.real(image_dixon)[mask]) > 0
+        else -1 * np.real(image_dixon)  # type: ignore
+    )
+    return image_rbc, image_membrane
 
 
 def calculate_rbc_oscillation(
@@ -207,14 +228,18 @@ def calculate_rbc_oscillation(
         image_total (np.ndarray): total image.
         mask(np.ndarray): booleaan mask of the lung. Must be the same size as the images.
         method (str): method to use for calculating oscillation.
+    Returns:
+        RBC oscillation image in percentage.
     """
     image_total = image_total.copy()
     image_total[mask == 0] = np.max(image_total[mask > 0])
     if method == constants.Methods.ELEMENTWISE:
-        return np.subtract(image_high, image_low) / image_total
+        return 100 * np.subtract(image_high, image_low) / image_total
     elif method == constants.Methods.MEAN:
-        return np.subtract(image_high, image_low) / np.abs(
-            np.mean(image_total[mask > 0])
+        return (
+            100
+            * np.subtract(image_high, image_low)
+            / np.abs(np.mean(image_total[mask > 0]))
         )
     else:
         raise ValueError("Invalid method: {}.".format(method))
