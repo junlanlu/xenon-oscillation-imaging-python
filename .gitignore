@@ -144,16 +144,21 @@ cython_debug/
 
 z_connection_lost.txt
 
-#vs code
+# vs code
 .vs/*
 
 # dll
 *.dll
 
-#Don't upload contents in option folder
+# Don't upload contents in option folder
 option/*.json
-config/*.py
+config/**
 !config/base_config.py
+!config/demo_config.py
 
 # Keep the assets folder
 !assets/*
+
+# ignore the data folder
+data/*
+!data/.gitkeep

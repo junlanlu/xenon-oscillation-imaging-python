@@ -63,7 +63,7 @@ class Params(object):
         self.threshold_oscillation = np.array(
             [-3.6436, 0.2917, 9.3565, 17.9514, 28.7061, 42.6798, 61.8248]
         )
-        self.threshold_rbc = np.array([0.066, 0.250, 0.453, 0.675, 0.956])
+        self.threshold_rbc = np.array([0.066, 0.250, 0.453, 0.675, 0.956]) / 2.0
 
 
 def get_config() -> config_dict.ConfigDict:

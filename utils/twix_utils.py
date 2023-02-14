@@ -388,6 +388,11 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
     twix_obj.image.flagRemoveOS = False
     raw_fids = np.transpose(twix_obj.image.unsorted().astype(np.cdouble))
     flip_angle_dissolved = get_flipangle_dissolved(twix_obj)
+    # get the scan date
+    scan_date = get_scan_date(twix_obj=twix_obj)
+    YYYY, MM, DD = scan_date.split("-")
+    cur_datetime = datetime.datetime(int(YYYY), int(MM), int(DD))
+    # check the flip angle and scan date to get the data
     if flip_angle_dissolved == 12:
         if raw_fids.shape[0] == 4200:
             logging.info("Reading in fast dixon data on Siemens Trio.")
@@ -408,6 +413,22 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
             n_skip_start = 0
             n_skip_end = 0
             grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
+        elif raw_fids.shape[0] == 2002 and cur_datetime > datetime.datetime(2018, 5, 1):
+            logging.info("Reading in 'normal' dixon data on Siemens Trio.")
+            data_gas = raw_fids[:-2][2::2, :]
+            data_dis = raw_fids[:-2][3::2, :]
+            n_frames = 1001
+            n_skip_start = 1
+            n_skip_end = 1
+            grad_delay_x, grad_delay_y, grad_delay_z = 0, -4, -3
+        elif raw_fids.shape[0] == 2002 and cur_datetime < datetime.datetime(2018, 5, 1):
+            logging.info("Reading in 'normal' dixon data on Siemens Trio.")
+            data_gas = raw_fids[:-2][2::2, :]
+            data_dis = raw_fids[:-2][3::2, :]
+            n_frames = 1001
+            n_skip_start = 1
+            n_skip_end = 1
+            grad_delay_x, grad_delay_y, grad_delay_z = 24, 22, 22
         else:
             raise ValueError("Cannot get data from normal dixon twix object.")
     else:

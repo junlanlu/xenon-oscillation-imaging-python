@@ -191,6 +191,13 @@ class StatsIOFields(object):
     PCT_OSC_HIGH = "osc_high"
 
 
+class MatIOFields(object):
+    """Mat file IO Fields."""
+
+    SUBJECT_ID = "subject_id"
+    IMAGE_RBC_OSC = "image_rbc_osc"
+
+
 class VENHISTOGRAMFields(object):
     """Ventilation historam fields."""
 
@@ -217,35 +224,6 @@ class PDFOPTIONS(object):
     }
 
 
-class REFERENCESTATS(object):
-    """Reference statistics."""
-
-    ref_stats_ven_gre_dict = {
-        "r_ven_defect_ave": "2.6",
-        "r_ven_defect_std": "1.8",
-        "r_ven_low_ave": "17.5",
-        "r_ven_low_std": "5.7",
-        "r_ven_high_ave": "16.7",
-        "r_ven_high_std": "3.3",
-        "r_ven_skewness_ave": "0",
-        "r_ven_skewness_std": "0.11",
-        "r_ven_CV_ave": "0.37",
-        "r_ven_CV_std": "0.04",
-        "r_ven_tcv_ave": "3.8",
-        "r_ven_tcv_std": "0.6",
-    }
-
-    REF_MEAN_VENT = 0.58
-    REF_STD_VENT = 0.19
-    REF_BINS_VEN_GRE = [
-        REF_MEAN_VENT - 2 * REF_STD_VENT,
-        REF_MEAN_VENT - REF_STD_VENT,
-        REF_MEAN_VENT,
-        REF_MEAN_VENT + REF_STD_VENT,
-        REF_MEAN_VENT + 2 * REF_STD_VENT,
-    ]
-
-
 class NormalizationMethods(object):
     """Image normalization methods."""
 
@@ -253,15 +231,18 @@ class NormalizationMethods(object):
     PERCENTILE = "percentile"
 
 
-class BIN2COLORMAP(object):
+class CMAP(object):
     """Maps of binned values to color values."""
 
-    VENT_BIN2COLOR_MAP = {
-        1: [0, 0, 0],
-        2: [1, 0, 0],
-        3: [1, 0.7143, 0],
-        4: [0.4, 0.7, 0.4],
-        5: [0, 1, 0],
-        6: [0, 0.57, 0.71],
-        7: [0, 0, 1],
+    RBC_OSC_BIN2COLOR = {
+        -1: [0.33, 0.33, 0.33],
+        0: [0, 0, 0],
+        1: [1, 0, 0],
+        2: [1, 0.7143, 0],
+        3: [0.4, 0.7, 0.4],
+        4: [0, 1, 0],
+        5: [184.0 / 255.0, 226.0 / 255.0, 145.0 / 255.0],
+        6: [243.0 / 255.0, 205.0 / 255.0, 213.0 / 255.0],
+        7: [225.0 / 255.0, 129.0 / 255.0, 162.0 / 255.0],
+        8: [197.0 / 255.0, 27.0 / 255.0, 125.0 / 255.0],
     }

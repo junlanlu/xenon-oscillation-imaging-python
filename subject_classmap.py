@@ -25,7 +25,9 @@ from utils import (
     img_utils,
     io_utils,
     metrics,
+    plot,
     recon_utils,
+    report,
     spect_utils,
     traj_utils,
 )
@@ -51,24 +53,31 @@ class Subject(object):
         self.dict_dyn = {}
         self.high_indices = np.array([0.0])
         self.image_dissolved = np.array([0.0])
+        self.image_dissolved_norm = np.array([0.0])
         self.image_gas = np.array([0.0])
         self.image_membrane = np.array([0.0])
+        self.image_membrane2gas = np.array([0.0])
         self.image_rbc = np.array([0.0])
+        self.image_rbc_norm = np.array([0.0])
+        self.image_rbc2gas = np.array([0.0])
         self.image_rbc_high = np.array([0.0])
         self.image_rbc_low = np.array([0.0])
         self.image_rbc_osc = np.array([0.0])
+        self.image_rbc_osc_binned = np.array([0.0])
         self.low_indices = np.array([0.0])
         self.manual_segmentation_filepath = str(config.manual_seg_filepath)
         self.mask = np.array([0.0])
-        self.metrics = {}
         self.rbc_m_ratio = 0.0
+        self.rbc_m_ratio_high = 0.0
+        self.rbc_m_ratio_low = 0.0
         self.segmentation_key = str(config.segmentation_key)
+        self.stats_dict = {}
         self.traj_dissolved = np.array([])
         self.traj_dis_high = np.array([])
         self.traj_dis_low = np.array([])
         self.traj_gas = np.array([])
 
-    def read_files(self):
+    def read_twix_files(self):
         """Read in files.
 
         Read in the dynamic spectroscopy (if it exists) and the dissolved-phase image
@@ -81,6 +90,30 @@ class Subject(object):
         self.dict_dis = io_utils.read_dis_twix(
             io_utils.get_dis_twix_files(str(self.config.data_dir))
         )
+
+    def read_mat_file(self):
+        """Read in mat file of reconstructed images.
+
+        Note: The mat file variable names are matched to the instance variable names.
+        Thus, if the variable names are changed in the mat file, they must be changed.
+        """
+        mdict = io_utils.import_mat(io_utils.get_mat_file(str(self.config.data_dir)))
+        self.data_dissolved = mdict["data_dissolved"]
+        self.data_dissolved_norm = mdict["data_dissolved_norm"]
+        self.data_dissolved_norm = mdict["data_dissolved_norm"]
+        self.data_rbc_k0 = mdict["data_rbc_k0"].flatten()
+        self.high_indices = mdict["high_indices"].flatten()
+        self.image_dissolved = mdict["image_dissolved"]
+        self.image_dissolved_high = mdict["image_dissolved_high"]
+        self.image_dissolved_low = mdict["image_dissolved_low"]
+        self.image_dissolved_norm = mdict["image_dissolved_norm"]
+        self.image_gas = mdict["image_gas"]
+        self.low_indices = mdict["low_indices"].flatten()
+        self.rbc_m_ratio = float(mdict["rbc_m_ratio"])
+        self.rbc_m_ratio_high = float(mdict["rbc_m_ratio_high"])
+        self.rbc_m_ratio_low = float(mdict["rbc_m_ratio_low"])
+        self.traj_dissolved = mdict["traj_dissolved"]
+        self.traj_gas = mdict["traj_gas"]
 
     def calculate_rbc_m_ratio(self):
         """Calculate RBC:M ratio using static spectroscopy.
@@ -169,7 +202,7 @@ class Subject(object):
         self.image_dissolved_norm = img_utils.flip_and_rotate_image(
             self.image_dissolved_norm, orientation=constants.Orientation.CORONAL
         )
-        self.image_dissolvedm = img_utils.flip_and_rotate_image(
+        self.image_dissolved = img_utils.flip_and_rotate_image(
             self.image_dissolved, orientation=constants.Orientation.CORONAL
         )
 
@@ -188,23 +221,6 @@ class Subject(object):
             rbc_m_ratio=self.rbc_m_ratio,
             TR=self.dict_dis[constants.IOFields.TR],
         )
-        # TODO remove these lines
-        mat_dict = io_utils.import_mat("tmp/indices.mat")
-        # self.high_indices = mat_dict["High_Bin_Index"]
-        # self.low_indices = mat_dict["Low_Bin_Index"]
-        mat_dict = io_utils.import_mat("tmp/subject.mat")
-        mask_mat = mat_dict["protonMask"]
-        self.mask = np.rot90(np.rot90(mask_mat, 3, axes=(0, 2)), 1, axes=(0, 1))
-        self.mask = img_utils.flip_and_rotate_image(self.mask)
-        self.mask = np.flip(self.mask, axis=1).astype(bool)
-        image_rbc_mat = mat_dict["RBC_Tot"]
-        image_rbc_mat = np.rot90(
-            np.rot90(image_rbc_mat, 3, axes=(0, 2)), 1, axes=(0, 1)
-        )
-        image_rbc_mat = img_utils.flip_and_rotate_image(image_rbc_mat)
-        image_rbc_mat = np.flip(image_rbc_mat, axis=1)
-        io_utils.export_nii(np.abs(image_rbc_mat), "tmp/rbc_mat.nii")
-        # TODO remove above lines
         # prepare data and traj for reconstruction
         data_dis_high, traj_dis_high = pp.prepare_data_and_traj_keyhole(
             data=self.data_dissolved_norm,
@@ -253,7 +269,6 @@ class Subject(object):
                 logging.error("Invalid mask nifti file.")
         else:
             raise ValueError("Invalid segmentation key.")
-        self.mask = img_utils.flip_and_rotate_image(self.mask)
 
     def dixon_decomposition(self):
         """Perform Dixon decomposition on the dissolved-phase images."""
@@ -287,6 +302,9 @@ class Subject(object):
         self.image_rbc2gas = img_utils.divide_images(
             image1=self.image_rbc, image2=np.abs(self.image_gas), mask=self.mask
         )
+        self.image_membrane2gas = img_utils.divide_images(
+            image1=self.image_membrane, image2=np.abs(self.image_gas), mask=self.mask
+        )
 
     def dissolved_binning(self):
         """Bin dissolved images to colormap bins."""
@@ -299,7 +317,8 @@ class Subject(object):
     def oscillation_analysis(self):
         """Calculate the oscillation image from the rbc high, low, and normal images."""
         # calculate the mask for the RBC image with sufficient SNR, excluding defects
-        self.mask_rbc = np.logical_and(self.mask, self.image_rbc_binned > 1)
+        image_noise = metrics.snr(self.image_rbc, self.mask)[2]
+        self.mask_rbc = np.logical_and(self.mask, self.image_rbc > image_noise)
         self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
             self.image_rbc_high, self.image_rbc_low, self.image_rbc_norm, self.mask
         )
@@ -312,30 +331,7 @@ class Subject(object):
             thresholds=self.config.params.threshold_oscillation,
         )
         # set unanalyzed voxels to -1
-        # self.image_rbc_osc_binned[np.logical_and(self.mask, ~self.mask_rbc)] = -1
-        io_utils.export_nii(self.image_rbc_osc_binned, "tmp/osc_binned.nii")
-        io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
-        io_utils.export_nii(np.abs(self.image_gas), "tmp/gas.nii")
-        io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
-        io_utils.export_nii(np.abs(self.image_membrane), "tmp/membrane.nii")
-        io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
-        io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
-        io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
-        io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
-
-        pdb.set_trace()
-        # plt.hist(self.image_rbc2gas[self.mask > 0].flatten(), 50)
-        # plt.hist(self.image_rbc_osc[self.mask > 0].flatten(), 50)
-        # plt.plot(self.data_rbc_k0)
-        # plt.xlim(-10, 30)
-        # plt.show()
-        # pdb.set_trace()
-        # plt.figure()
-        # t = np.arange(self.data_rbc_k0.shape[0])
-        # plt.plot(t, self.data_rbc_k0, "k.")
-        # plt.plot(t[self.high_indices], self.data_rbc_k0[self.high_indices], "r.")
-        # plt.plot(t[self.low_indices], self.data_rbc_k0[self.low_indices], "b.")
-        # plt.show()
+        self.image_rbc_osc_binned[np.logical_and(self.mask, ~self.mask_rbc)] = -1
 
     def get_statistics(self):
         """Calculate image statistics."""
@@ -359,14 +355,82 @@ class Subject(object):
 
     def generate_figures(self):
         """Export image figures."""
+        index_start, index_skip = plot.get_plot_indices(self.mask)
+        plot.plot_montage_grey(
+            image=np.abs(self.image_gas),
+            path="tmp/montage_ven.png",
+            index_start=index_start,
+            index_skip=index_skip,
+        )
+        plot.plot_montage_grey(
+            image=np.abs(self.image_membrane),
+            path="tmp/montage_membrane.png",
+            index_start=index_start,
+            index_skip=index_skip,
+        )
+        plot.plot_montage_grey(
+            image=np.abs(self.image_rbc),
+            path="tmp/montage_rbc.png",
+            index_start=index_start,
+            index_skip=index_skip,
+        )
+        plot.plot_montage_color(
+            image=plot.map_grey_to_rgb(
+                self.image_rbc_osc_binned, constants.CMAP.RBC_OSC_BIN2COLOR
+            ),
+            path="tmp/montage_rbc_rgb.png",
+            index_start=index_start,
+            index_skip=index_skip,
+        )
+        plot.plot_histogram_ventilation(
+            data=np.abs(self.image_gas)[self.mask].flatten(), path="tmp/hist_ven.png"
+        )
+        plot.plot_histogram_rbc_osc(
+            data=self.image_rbc_osc[self.mask_rbc],
+            path="tmp/hist_rbc_osc.png",
+        )
+        plot.plot_data_rbc_k0(
+            t=np.arange(self.data_rbc_k0.shape[0])
+            * self.dict_dis[constants.IOFields.TR],
+            data=self.data_rbc_k0,
+            path="tmp/data_rbc_k0.png",
+            high=self.high_indices,
+            low=self.low_indices,
+        )
 
-    def generateHtmlPdf(self):
+    def generate_pdf(self):
         """Generate HTML and PDF files."""
+        report.clinical(self.stats_dict, path="tmp/clinical.html")
 
-    def saveMat(self):
+    def save_subject_to_mat(self):
         """Save the instance variables into a mat file."""
-        return
+        path = os.path.join(self.config.data_dir, self.config.subject_id + ".mat")
+        io_utils.export_subject_mat(self, path)
 
     def savefiles(self):
         """Save select images to nifti files and instance variable to mat."""
+        # io_utils.export_nii(self.image_rbc_osc_binned, "tmp/osc_binned.nii")
+        # io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
+        # io_utils.export_nii(np.abs(self.image_gas), "tmp/gas.nii")
+        # io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
+        # io_utils.export_nii(np.abs(self.image_membrane), "tmp/membrane.nii")
+        # io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
+        # io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
+        # io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
+        # io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
+        # plt.hist(np.abs(self.image_gas[self.mask > 0]).flatten(), 50)
+        # plt.hist(self.image_membrane2gas[self.mask > 0].flatten(), 50)
+        # pdb.set_trace()
+        # plt.hist(self.image_rbc2gas[self.mask > 0].flatten(), 50)
+        # plt.hist(self.image_rbc_osc[self.mask > 0].flatten(), 50)
+        # plt.plot(self.data_rbc_k0)
+        # plt.xlim(-10, 30)
+        # plt.show()
+        # pdb.set_trace()
+        # plt.figure()
+        # t = np.arange(self.data_rbc_k0.shape[0])
+        # plt.plot(t, self.data_rbc_k0, "k.")
+        # plt.plot(t[self.high_indices], self.data_rbc_k0[self.high_indices], "r.")
+        # plt.plot(t[self.low_indices], self.data_rbc_k0[self.low_indices], "b.")
+        # plt.show()
         return

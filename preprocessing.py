@@ -40,14 +40,23 @@ def prepare_data_and_traj(
             n_frames=data_dict[constants.IOFields.N_FRAMES],
             n_points=data_gas.shape[1],
         )
+        # remove projections at the beginning and end of the trajectory
+        shape_traj = traj_x.shape
+        nskip_start = int(data_dict[constants.IOFields.N_SKIP_START])
+        nskip_end = int(data_dict[constants.IOFields.N_SKIP_END])
+        traj_x = traj_x[nskip_start : shape_traj[0] - (nskip_end)]
+        traj_y = traj_y[nskip_start : shape_traj[0] - (nskip_end)]
+        traj_z = traj_z[nskip_start : shape_traj[0] - (nskip_end)]
     else:
         raise ValueError("Manual trajectory import not implemented yet.")
+    # remove noisy radial projections
     indices_dis = recon_utils.remove_noise_rays(
         data=data_dis,
     )
     indices_gas = recon_utils.remove_noise_rays(
         data=data_gas,
     )
+    # ensure that same projections are removed for dissolved and gas
     indices = np.logical_and(indices_dis, indices_gas)
     data_gas, traj_gas_x, traj_gas_y, traj_gas_z = recon_utils.apply_indices_mask(
         data=data_gas,

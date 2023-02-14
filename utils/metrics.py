@@ -25,7 +25,7 @@ def snr(image: np.ndarray, mask: np.ndarray, window_size: int = 8):
         window_size (int): size of the sliding window for noise calculation.
             Defaults to 8.
     Returns:
-        Tuple of SNR and Rayleigh SNR.
+        Tuple of SNR and Rayleigh SNR and image noise
     """
     shape = np.shape(image)
     # dilate the mask to analyze noise area away from the signal
@@ -39,7 +39,7 @@ def snr(image: np.ndarray, mask: np.ndarray, window_size: int = 8):
 
     noise_temp = np.copy(image)
     noise_temp[noise_mask] = np.nan
-    # set up for using mini noise cubes to go through the image and calculate std for noise
+    # set up for using mini noise cubes through the image and calculate std for noise
     n_noise_vox = window_size * window_size * window_size
     mini_vox_std = 0.75 * n_noise_vox  # minimul number of voxels to calculate std
 
@@ -68,7 +68,7 @@ def snr(image: np.ndarray, mask: np.ndarray, window_size: int = 8):
     image_signal = np.average(image[mask])
 
     SNR = image_signal / image_noise
-    return SNR, SNR * 0.66
+    return SNR, SNR * 0.66, image_noise
 
 
 def inflation_volume(mask: np.ndarray, fov: float) -> float:

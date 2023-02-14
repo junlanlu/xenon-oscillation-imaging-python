@@ -20,7 +20,7 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
         config (config_dict.ConfigDict): config dict
     """
     subject = Subject(config=config)
-    subject.read_files()
+    subject.read_twix_files()
     logging.info("Getting RBC:M ratio from static spectroscopy.")
     subject.calculate_rbc_m_ratio()
     logging.info("Reconstructing images")
@@ -28,15 +28,40 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
     subject.reconstruction_gas()
     subject.reconstruction_dissolved()
     subject.reconstruction_rbc_oscillation()
-    # subject.segmentation()
+    subject.save_subject_to_mat()
+    logging.info("Segmenting Proton Mask")
+    subject.segmentation()
     subject.dixon_decomposition()
     subject.dissolved_analysis()
     subject.dissolved_binning()
     subject.oscillation_analysis()
     subject.oscillation_binning()
-    logging.info("Segmenting Proton Mask")
     subject.get_statistics()
-    subject.savefiles()
+    subject.generate_figures()
+    subject.generate_pdf()
+    logging.info("Complete")
+
+
+def oscillation_mapping_readin(config: base_config.Config):
+    """Run the 2D ventilation pipeline.
+
+    Args:
+        config (config_dict.ConfigDict): config dict
+    """
+    subject = Subject(config=config)
+    subject.read_twix_files()
+    subject.read_mat_file()
+    logging.info("Segmenting Proton Mask")
+    subject.segmentation()
+    subject.save_subject_to_mat()
+    subject.dixon_decomposition()
+    subject.dissolved_analysis()
+    subject.dissolved_binning()
+    subject.oscillation_analysis()
+    subject.oscillation_binning()
+    subject.get_statistics()
+    subject.generate_figures()
+    subject.generate_pdf()
     logging.info("Complete")
 
 
@@ -46,6 +71,9 @@ def main(argv):
     if config.processes.oscillation_mapping_recon:
         logging.info("Oscillation imaging mapping with reconstruction.")
         oscillation_mapping_reconstruction(config)
+    elif config.processes.oscillation_mapping_readin:
+        logging.info("Oscillation imaging mapping with reconstruction.")
+        oscillation_mapping_readin(config)
 
 
 if __name__ == "__main__":

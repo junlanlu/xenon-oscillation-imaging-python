@@ -67,6 +67,18 @@ def get_dis_twix_files(path: str) -> str:
         raise ValueError("Can't find twix file in path.")
 
 
+def get_mat_file(path: str) -> str:
+    """Get list of mat file of reconstructed images.
+
+    Args:
+        path: str directory path of mat file.
+    """
+    try:
+        return (glob.glob(os.path.join(path, "**.mat")))[0]
+    except:
+        raise ValueError("Can't find twix file in path.")
+
+
 def read_dyn_twix(path: str) -> Dict[str, Any]:
     """Read dynamic spectroscopy twix file.
 
@@ -180,3 +192,8 @@ def export_nii(image: np.ndarray, path: str, fov: Optional[float] = None):
     """
     nii_imge = nib.Nifti1Image(image, np.eye(4))
     nib.save(nii_imge, path)
+
+
+def export_subject_mat(subject: object, path: str):
+    """Export select subject instance variables to mat file."""
+    sio.savemat(path, vars(subject))
