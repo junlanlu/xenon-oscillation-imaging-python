@@ -1,4 +1,4 @@
-"""Base configuration file."""
+"""Demo configuration file."""
 import sys
 
 from ml_collections import config_dict
@@ -11,7 +11,10 @@ from utils import constants
 
 
 class Config(base_config.Config):
-    """Base config file."""
+    """Demo config file.
+
+    Inherit from base_config.Config and override the parameters.
+    """
 
     def __init__(self):
         """Initialize config parameters."""
@@ -23,7 +26,6 @@ class Config(base_config.Config):
         self.site = constants.Site.DUKE.value
         self.subject_id = "test"
         self.rbc_m_ratio = 0.0
-        self.kernel_sharpness = 0.14
 
 
 def get_config() -> config_dict.ConfigDict:

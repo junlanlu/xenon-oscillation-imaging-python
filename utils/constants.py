@@ -179,6 +179,7 @@ class StatsIOFields(object):
 
     SUBJECT_ID = "subject_id"
     INFLATION = "inflation"
+    RBC_M_RATIO = "rbc_m_ratio"
     SCAN_DATE = "scan_date"
     PROCESS_DATE = "process_date"
     SNR_RBC_LOW = "snr_rbc_low"
@@ -189,6 +190,7 @@ class StatsIOFields(object):
     PCT_OSC_DEFECTLOW = "osc_defectlow"
     PCT_OSC_NORMAL = "osc_normal"
     PCT_OSC_HIGH = "osc_high"
+    PCT_OSC_MEAN = "osc_mean"
 
 
 class MatIOFields(object):

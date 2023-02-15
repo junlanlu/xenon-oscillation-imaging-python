@@ -162,3 +162,7 @@ config/**
 # ignore the data folder
 data/*
 !data/.gitkeep
+
+
+# Ignore all tests
+**/test_*.py

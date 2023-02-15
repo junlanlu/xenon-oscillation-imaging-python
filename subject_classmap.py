@@ -1,24 +1,17 @@
 """Module for oscillation imaging subject."""
-import datetime
 import glob
 import logging
 import os
 import pdb
 
-import matplotlib
 import nibabel as nib
 import numpy as np
-import scipy.io as sio
-
-from config import base_config
-
-matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt
 
 import oscillation_binning as ob
 import preprocessing as pp
 import reconstruction
 import segmentation
+from config import base_config
 from utils import (
     binning,
     constants,
@@ -257,7 +250,7 @@ class Subject(object):
         """Segment the thoracic cavity."""
         if self.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
             logging.info("Performing neural network segmenation.")
-            self.mask = segmentation.predict(self.image_gas, erosion=3)
+            self.mask = segmentation.predict(self.image_gas, erosion=5)
         elif self.segmentation_key == constants.SegmentationKey.SKIP.value:
             self.mask = np.ones_like(self.image_gas)
         elif self.segmentation_key == constants.SegmentationKey.MANUAL_VENT.value:
@@ -340,6 +333,7 @@ class Subject(object):
             constants.StatsIOFields.INFLATION: metrics.inflation_volume(
                 self.mask, self.dict_dis[constants.IOFields.FOV]
             ),
+            constants.StatsIOFields.RBC_M_RATIO: self.rbc_m_ratio,
             constants.StatsIOFields.SCAN_DATE: self.dict_dis[
                 constants.IOFields.SCAN_DATE
             ],
@@ -351,6 +345,21 @@ class Subject(object):
             constants.StatsIOFields.SNR_RBC_LOW: metrics.snr(
                 self.image_rbc_low, self.mask
             )[0],
+            constants.StatsIOFields.PCT_OSC_DEFECT: metrics.bin_percentage(
+                self.image_rbc_osc_binned, np.array([1])
+            ),
+            constants.StatsIOFields.PCT_OSC_LOW: metrics.bin_percentage(
+                self.image_rbc_osc_binned, np.array([2])
+            ),
+            constants.StatsIOFields.PCT_OSC_HIGH: metrics.bin_percentage(
+                self.image_rbc_osc_binned, np.array([6, 7, 8])
+            ),
+            constants.StatsIOFields.PCT_OSC_MEAN: metrics.mean_oscillation_percentage(
+                self.image_rbc_osc_binned, self.mask_rbc
+            ),
+            constants.StatsIOFields.PCT_OSC_DEFECTLOW: metrics.bin_percentage(
+                self.image_rbc_osc_binned, np.array([1, 2])
+            ),
         }
 
     def generate_figures(self):
@@ -400,7 +409,12 @@ class Subject(object):
 
     def generate_pdf(self):
         """Generate HTML and PDF files."""
-        report.clinical(self.stats_dict, path="tmp/clinical.html")
+        path = os.path.join(self.config.data_dir, "report_clinical.pdf")
+        report.clinical(self.stats_dict, path=path)
+
+    def write_stats_to_csv(self):
+        """Write statistics to file."""
+        io_utils.export_subject_csv(self.stats_dict, path="data/stats_clinical.csv")
 
     def save_subject_to_mat(self):
         """Save the instance variables into a mat file."""
@@ -409,28 +423,13 @@ class Subject(object):
 
     def savefiles(self):
         """Save select images to nifti files and instance variable to mat."""
-        # io_utils.export_nii(self.image_rbc_osc_binned, "tmp/osc_binned.nii")
-        # io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
-        # io_utils.export_nii(np.abs(self.image_gas), "tmp/gas.nii")
-        # io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
-        # io_utils.export_nii(np.abs(self.image_membrane), "tmp/membrane.nii")
-        # io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
-        # io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
-        # io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
-        # io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
-        # plt.hist(np.abs(self.image_gas[self.mask > 0]).flatten(), 50)
-        # plt.hist(self.image_membrane2gas[self.mask > 0].flatten(), 50)
-        # pdb.set_trace()
-        # plt.hist(self.image_rbc2gas[self.mask > 0].flatten(), 50)
-        # plt.hist(self.image_rbc_osc[self.mask > 0].flatten(), 50)
-        # plt.plot(self.data_rbc_k0)
-        # plt.xlim(-10, 30)
-        # plt.show()
-        # pdb.set_trace()
-        # plt.figure()
-        # t = np.arange(self.data_rbc_k0.shape[0])
-        # plt.plot(t, self.data_rbc_k0, "k.")
-        # plt.plot(t[self.high_indices], self.data_rbc_k0[self.high_indices], "r.")
-        # plt.plot(t[self.low_indices], self.data_rbc_k0[self.low_indices], "b.")
-        # plt.show()
+        io_utils.export_nii(self.image_rbc_osc_binned, "tmp/osc_binned.nii")
+        io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
+        io_utils.export_nii(np.abs(self.image_gas), "tmp/gas.nii")
+        io_utils.export_nii(np.abs(self.image_rbc), "tmp/rbc.nii")
+        io_utils.export_nii(np.abs(self.image_membrane), "tmp/membrane.nii")
+        io_utils.export_nii(self.mask.astype(float), "tmp/mask.nii")
+        io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
+        io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
+        io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
         return

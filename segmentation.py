@@ -5,7 +5,6 @@
 import os
 
 import numpy as np
-import tensorflow as tf
 from absl import app, flags
 from scipy.ndimage import zoom
 

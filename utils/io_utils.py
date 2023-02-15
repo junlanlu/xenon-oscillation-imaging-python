@@ -14,6 +14,7 @@ import mapvbvd
 import matplotlib
 import nibabel as nib
 import numpy as np
+import pandas as pd
 import scipy.io as sio
 
 from utils import constants, twix_utils
@@ -195,5 +196,33 @@ def export_nii(image: np.ndarray, path: str, fov: Optional[float] = None):
 
 
 def export_subject_mat(subject: object, path: str):
-    """Export select subject instance variables to mat file."""
+    """Export select subject instance variables to mat file.
+
+    Args:
+        subject: subject instance
+        path: str file path of mat file
+    """
     sio.savemat(path, vars(subject))
+
+
+def export_subject_csv(stats_dict: Dict[str, Any], path: str):
+    """Export statistics to running csv file.
+
+    Uses the csv.DictWriter class to write a csv file. First, checks if the csv
+    file exists and the header has been written. If not, writes the header. Then,
+    writes the row of data.
+
+    Args:
+        stats_dict: dictionary containing statistics to be exported
+        path: str file path of csv file
+    """
+    header = stats_dict.keys()
+    if not os.path.exists(path):
+        with open(path, "w", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=header)
+            writer.writeheader()
+            writer.writerow(stats_dict)
+    else:
+        with open(path, "a", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=header)
+            writer.writerow(stats_dict)

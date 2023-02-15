@@ -197,19 +197,19 @@ def plot_histogram_rbc_osc(data: np.ndarray, path: str):
     _, bins, _ = ax.hist(
         data, bins=50, color=(0, 0.8, 0.8), weights=weights, edgecolor="black"
     )
-
+    ax.set_ylabel("Fraction of Total Pixels", fontsize=35)
     # define and plot healthy reference line
     # refer_fit = []
     # normal = refer_fit[0] * np.exp(-(((bins - refer_fit[1]) / refer_fit[2]) ** 2))
     # ax.plot(bins, normal, "--", color="k", linewidth=4)
     # ax.set_ylabel("Fraction of Total Pixels", fontsize=35)
     # set plot parameters
-    plt.xlim((-20, 50))
-    plt.ylim((0, 0.1))
+    plt.xlim((-15, 35))
+    plt.ylim((0, 0.07))
     plt.rc("axes", linewidth=4)
     # define ticks
     xticks = [-10, 0, 10, 20, 30, 50]
-    yticks = [0.05, 0.10]
+    yticks = [0.02, 0.04]
     plt.xticks(xticks, ["{:.0f}".format(x) for x in xticks], fontsize=40)
     plt.yticks(yticks, ["{:.2f}".format(x) for x in yticks], fontsize=40)
     fig.tight_layout()
@@ -271,9 +271,12 @@ def plot_data_rbc_k0(
     ax.plot(t, data, "-", color="k", linewidth=5)
     ax.plot(t[high], data[high], ".", color="C2", markersize=10)
     ax.plot(t[low], data[low], ".", color="C1", markersize=10)
+    ax.plot(t, np.zeros((len(t), 1)), ".", color="k", linewidth=2)
+    ax.set_ylabel("Fraction of Total Pixels", fontsize=35)
     # set plot parameters
     plt.rc("axes", linewidth=4)
-    plt.axis("off")
+    plt.xticks([], [])
+    plt.yticks([], [])
     # set ticks
     fig.tight_layout()
     plt.savefig(path)

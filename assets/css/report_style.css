@@ -41,7 +41,7 @@ body {
 .table-container {
 	width: 180px;
 	margin-right: 10px;
-	font-size: 14pt;
+	font-size: 12pt;
 	float: left;
 }
 .hist-tile {
@@ -114,50 +114,4 @@ tr.basic {
 tr.title {
 	color: white;
 	background-color: #606060;
-}
-/*style for lobar analysis report*/
-.lobar-map-container {
-	width: 700px;
-	padding: 0px;
-	border: 0px;
-	margin-left: 20px;
-	float: left;
-	background: black;
-}
-.lobar-map-tile {
-	width: 730px;
-	color: white;
-	border: 0px;
-	margin-left: -35px;
-	margin-top: 10px;
-	margin-bottom: -25px;
-	padding: 0px;
-	overflow: hidden;
-	float: left;
-}
-.lobar-table-container {
-	width: 700px;
-	margin-left: 20px;
-	margin-right: 10px;
-	font-size: 10pt;
-	float: none;
-}
-.lobar-table {
-	height: 180px;
-	width: 500px;
-	font-size: 10pt;
-	float: left;
-}
-.lobar-pie-container {
-	width: 800px;
-	margin-left: 0px;
-	margin-right: 0px;
-	font-size: 10pt;
-	float: left;
-}
-.lobar-pie-tile {
-	margin-left: 0px;
-	margin-right: -10px;
-	margin-top: 20px;
-	float: left;
 }

@@ -3,13 +3,9 @@
 import pdb
 from typing import Tuple
 
-import matplotlib
 import numpy as np
 
 from utils import signal_utils
-
-matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt
 
 
 def bin_rbc_oscillations(
