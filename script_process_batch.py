@@ -42,7 +42,7 @@ def main(argv):
             logging.info("Processing subject: %s", config.subject_id)
             if FLAGS.force_recon:
                 oscillation_mapping_reconstruction(config)
-            elif FLAGS.force_reading:
+            elif FLAGS.force_readin:
                 oscillation_mapping_readin(config)
             elif config.processes.oscillation_mapping_reconstruction:
                 oscillation_mapping_reconstruction(config)

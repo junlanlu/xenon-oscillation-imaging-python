@@ -390,7 +390,7 @@ class Subject(object):
                 self.image_rbc_osc_binned, np.array([6, 7, 8])
             ),
             constants.StatsIOFields.PCT_OSC_MEAN: metrics.mean_oscillation_percentage(
-                self.image_rbc_osc_binned, self.mask_rbc
+                self.image_rbc_osc, self.mask_rbc
             ),
             constants.StatsIOFields.PCT_OSC_DEFECTLOW: metrics.bin_percentage(
                 self.image_rbc_osc_binned, np.array([1, 2])
