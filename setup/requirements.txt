@@ -6,13 +6,11 @@ astunparse==1.6.3
 attrs==22.1.0
 backports.zoneinfo==0.2.1
 cachetools==4.2.4
-certifi @ file:///croot/certifi_1671487769961/work/certifi
 charset-normalizer==2.1.0
 chart-studio==1.1.0
 contextlib2==21.6.0
 cycler==0.11.0
 Django==4.1
-flit_core @ file:///opt/conda/conda-bld/flit-core_1644941570762/work/source/flit_core
 fonttools==4.36.0
 gast==0.3.3
 gevent==21.12.0
@@ -63,7 +61,7 @@ pydocstyle==6.3.0
 pyMapVBVD==0.4.8
 Pympler==1.0.1
 pyparsing==3.0.9
-PyPDF2 @ file:///opt/conda/conda-bld/pypdf2_1662469682626/work
+PyPDF2
 PyQt5==5.15.7
 PyQt5-Qt5==5.15.2
 PyQt5-sip==12.11.0
@@ -95,7 +93,7 @@ threadpoolctl==3.1.0
 tifffile==2022.8.12
 tomli==2.0.1
 tqdm==4.64.0
-typing_extensions @ file:///croot/typing_extensions_1669924550328/work
+typing_extensions
 urllib3==1.26.11
 webcolors==1.12
 Werkzeug==2.2.2
