@@ -20,7 +20,7 @@ class Config(base_config.Config):
         """Initialize config parameters."""
         super().__init__()
         self.data_dir = "/mnt/d/Patients/007-028B/"
-        self.platform = constants.Platform
+        self.platform = constants.Platform.SIEMENS.value
         self.scan_type = constants.ScanType.NORMALDIXON.value
         self.segmentation_key = constants.SegmentationKey.CNN_VENT.value
         self.site = constants.Site.DUKE.value
