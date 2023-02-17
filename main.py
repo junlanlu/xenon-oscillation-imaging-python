@@ -11,6 +11,8 @@ from subject_classmap import Subject
 FLAGS = flags.FLAGS
 
 _CONFIG = config_flags.DEFINE_config_file("config", None, "config file.")
+flags.DEFINE_boolean("force_recon", False, "force reconstruction for the subject")
+flags.DEFINE_boolean("force_readin", False, "force read in .mat for the subject")
 
 
 def oscillation_mapping_reconstruction(config: base_config.Config):
@@ -28,9 +30,9 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
     subject.reconstruction_gas()
     subject.reconstruction_dissolved()
     subject.reconstruction_rbc_oscillation()
-    subject.save_subject_to_mat()
     logging.info("Segmenting Proton Mask")
     subject.segmentation()
+    subject.save_subject_to_mat()
     subject.dixon_decomposition()
     subject.dissolved_analysis()
     subject.dissolved_binning()
@@ -74,7 +76,13 @@ def main(argv):
     Either run the reconstruction or read in the .mat file.
     """
     config = _CONFIG.value
-    if config.processes.oscillation_mapping_recon:
+    if FLAGS.force_recon:
+        logging.info("Oscillation imaging mapping with reconstruction.")
+        oscillation_mapping_reconstruction(config)
+    elif FLAGS.force_readin:
+        logging.info("Oscillation imaging mapping with reconstruction.")
+        oscillation_mapping_readin(config)
+    elif config.processes.oscillation_mapping_recon:
         logging.info("Oscillation imaging mapping with reconstruction.")
         oscillation_mapping_reconstruction(config)
     elif config.processes.oscillation_mapping_readin:

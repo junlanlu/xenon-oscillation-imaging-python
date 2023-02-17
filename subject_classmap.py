@@ -96,6 +96,7 @@ class Subject(object):
         self.data_dissolved_norm = mdict["data_dissolved_norm"]
         self.data_rbc_k0 = mdict["data_rbc_k0"].flatten()
         self.high_indices = mdict["high_indices"].flatten()
+        self.mask = mdict["mask"]
         self.image_dissolved = mdict["image_dissolved"]
         self.image_dissolved_high = mdict["image_dissolved_high"]
         self.image_dissolved_low = mdict["image_dissolved_low"]
@@ -126,10 +127,6 @@ class Subject(object):
                 rf_excitation=self.dict_dyn[constants.IOFields.FREQ_EXCITATION],
                 plot=False,
             )
-
-    def readMatFile(self):
-        """Read in Mat files."""
-        return
 
     def preprocess(self):
         """Prepare data and trajectory for reconstruction.
@@ -257,7 +254,9 @@ class Subject(object):
             logging.info("loading mask file specified by the user.")
             try:
                 mask = glob.glob(self.manual_segmentation_filepath)[0]
-                self.mask = np.squeeze(np.array(nib.load(mask).get_fdata()))
+                self.mask = np.squeeze(np.array(nib.load(mask).get_fdata())).astype(
+                    bool
+                )
             except ValueError:
                 logging.error("Invalid mask nifti file.")
         else:
@@ -313,7 +312,7 @@ class Subject(object):
         image_noise = metrics.snr(self.image_rbc, self.mask)[2]
         self.mask_rbc = np.logical_and(self.mask, self.image_rbc > image_noise)
         self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
-            self.image_rbc_high, self.image_rbc_low, self.image_rbc_norm, self.mask
+            self.image_rbc_high, self.image_rbc_low, self.image_rbc_norm, self.mask_rbc
         )
 
     def oscillation_binning(self):

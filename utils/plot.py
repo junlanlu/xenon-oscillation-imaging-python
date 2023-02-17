@@ -276,7 +276,7 @@ def plot_data_rbc_k0(
     # set plot parameters
     plt.rc("axes", linewidth=4)
     plt.xticks([], [])
-    plt.yticks([], [])
+    plt.yticks(fontsize=40)
     # set ticks
     fig.tight_layout()
     plt.savefig(path)

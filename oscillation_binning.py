@@ -3,6 +3,10 @@
 import pdb
 from typing import Tuple
 
+import matplotlib
+from matplotlib import pyplot as plt
+
+matplotlib.use("TkAgg")
 import numpy as np
 
 from utils import signal_utils
@@ -39,7 +43,9 @@ def bin_rbc_oscillations(
     data_rbc_k0_proc = signal_utils.smooth(
         data=data_rbc_k0_proc, window_size=window_size
     )
-    # filter data
+    # detrend residual exponential decay
+    # data_rbc_k0_proc = signal_utils.detrend(data_rbc_k0_proc)
+    # apply low pass filter
     data_rbc_k0_proc = signal_utils.bandpass(
         data=data_rbc_k0_proc, lowcut=0.5, highcut=2.5, fs=1 / TR
     )

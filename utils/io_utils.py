@@ -20,11 +20,24 @@ import scipy.io as sio
 from utils import constants, twix_utils
 
 
+def import_np(path: str) -> np.ndarray:
+    """Import npy file to np.ndarray.
+
+    Args:
+        path: str file path of npy file
+    Returns:
+        np.ndarray loaded from npy file
+    """
+    return np.load(path)
+
+
 def import_nii(path: str) -> np.ndarray:
     """Import image as np.ndarray.
 
     Args:
         path: str file path of nifti file
+    Returns:
+        np.ndarray loaded from nifti file
     """
     return nib.load(path).get_fdata()
 
@@ -34,6 +47,8 @@ def import_mat(path: str) -> Dict[str, Any]:
 
     Args:
         path: str file path of matlab file
+    Returns:
+        dictionary loaded from matlab file
     """
     return sio.loadmat(path)
 
@@ -43,11 +58,14 @@ def get_dyn_twix_files(path: str) -> str:
 
     Args:
         path: str directory path of twix files
+    Returns:
+        str file path of twix file
     """
     try:
         return (
             glob.glob(os.path.join(path, "**cali**.dat"))
             + glob.glob(os.path.join(path, "**dynamic**.dat"))
+            + glob.glob(os.path.join(path, "**Dynamic**.dat"))
         )[0]
     except:
         raise ValueError("Can't find twix file in path.")
@@ -58,6 +76,8 @@ def get_dis_twix_files(path: str) -> str:
 
     Args:
         path: str directory path of twix files
+    Returns:
+        str file path of twix file
     """
     try:
         return (
@@ -73,6 +93,8 @@ def get_mat_file(path: str) -> str:
 
     Args:
         path: str directory path of mat file.
+    Returns:
+        str file path of mat file
     """
     try:
         return (glob.glob(os.path.join(path, "**.mat")))[0]
@@ -205,12 +227,23 @@ def export_subject_mat(subject: object, path: str):
     sio.savemat(path, vars(subject))
 
 
+def export_np(arr: np.ndarray, path: str):
+    """Export numpy array to npy file.
+
+    Args:
+        arr: np.ndarray array to be exported
+        path: str file path of npy file
+    """
+    np.save(path, arr)
+
+
 def export_subject_csv(stats_dict: Dict[str, Any], path: str):
     """Export statistics to running csv file.
 
     Uses the csv.DictWriter class to write a csv file. First, checks if the csv
     file exists and the header has been written. If not, writes the header. Then,
-    writes the row of data.
+    writes the row of data. If the subject ID is repeated, the data will be
+    overwritten.
 
     Args:
         stats_dict: dictionary containing statistics to be exported

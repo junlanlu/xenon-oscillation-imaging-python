@@ -1,9 +1,35 @@
 """Signal processing util functions."""
 import pdb
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
+import scipy.optimize as optimize
 import scipy.signal as signal
+import scipy.stats as stats
+
+
+def boxcox(data: np.ndarray):
+    """Apply box cox transformation on data.
+
+    Args:
+        data (np.ndarray): data to be transformed of shape (n,)
+    Returns:
+        Tuple of transformed data and box cox lambda
+    """
+    return stats.boxcox(data)
+
+
+def inverse_boxcox(
+    boxcox_lambda: float, data: np.ndarray, scale_factor: float
+) -> np.ndarray:
+    """Apply inverse box cox transformation on data.
+
+    Args:
+        boxcox_lambda (float): box cox lambda
+        data (np.ndarray): data to be transformed of shape (n,)
+        scale_factor (float): scale factor to be applied to the data
+    """
+    return np.power(boxcox_lambda * data + 1, 1 / boxcox_lambda) - scale_factor
 
 
 def dixon_decomposition(
@@ -60,8 +86,8 @@ def bandpass(data: np.ndarray, lowcut: float, highcut: float, fs: float) -> np.n
 
     Args:
         data (np.ndarray): 1-D array data to be filtered.
-        lowcut (float): lowcut frequency.
-        highcut (float): highcut frequency.
+        lowcut (float): lowcut frequency in Hz.
+        highcut (float): highcut frequency in Hz.
         fs (float): sampling frequency.
     Returns:
         Filtered data.
@@ -69,8 +95,45 @@ def bandpass(data: np.ndarray, lowcut: float, highcut: float, fs: float) -> np.n
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
-    b, a = signal.butter(6, [low, high], btype="bandpass")
-    return signal.filtfilt(b, a, data)
+    sos = signal.butter(6, [low, high], analog=False, btype="bandpass", output="sos")
+    return np.array(signal.sosfiltfilt(sos, data))
+
+
+def lowpass(data: np.ndarray, highcut: float, fs: float) -> np.ndarray:
+    """Bandpass filter.
+
+    Implements a bandpass filter using a butterworth filter.
+    Equivalent to MATLAB bandpass filter.
+
+    Args:
+        data (np.ndarray): 1-D array data to be filtered.
+        highcut (float): highcut frequency in Hz.
+        fs (float): sampling frequency.
+    Returns:
+        Filtered data.
+    """
+    nyq = 0.5 * fs
+    high = highcut / nyq
+    sos = signal.butter(6, high, btype="lowpass", output="sos")
+    return np.array(signal.sosfiltfilt(sos, data))
+
+
+def detrend(data: np.ndarray) -> np.ndarray:
+    """Remove bi-exponential trend along axis from data.
+
+    Fits the data to a bi-exponential decay function and removes the trend.
+
+    Args:
+        data (np.ndarray): 1-D array data to be detrended.
+    """
+    x = np.arange(data.shape[0])
+    y = data
+
+    def func(x, a, b, c, d):
+        return a * np.exp(-b * x) + c * np.exp(-d * x)
+
+    popt, _ = optimize.curve_fit(func, x, y, p0=[1, 0.1, 1, 0.1])
+    return data - func(x, *popt)
 
 
 def find_peaks(data: np.ndarray, distance: int = 5) -> np.ndarray:
@@ -127,8 +190,8 @@ def find_high_low_indices(
     Returns:
         Tuple of indices of high and low signal bins respectively.
     """
-    high_peaks = find_peaks(data=data, distance=int(0.25 * peak_distance))
-    low_peaks = find_peaks(data=-data, distance=int(0.25 * peak_distance))
+    high_peaks = find_peaks(data=data, distance=int(0.6 * peak_distance))
+    low_peaks = find_peaks(data=-data, distance=int(0.6 * peak_distance))
 
     high_indices = np.array([])
     low_indices = np.array([])

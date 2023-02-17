@@ -60,8 +60,13 @@ class Params(object):
 
     def __init__(self):
         """Initialize the reconstruction parameters."""
+        # used in the bugged matlab pipeline
+        # self.threshold_oscillation = np.array(
+        #     [-3.6436, 0.2917, 9.3565, 17.9514, 28.7061, 42.6798, 61.8248]
+        # )
+        # reprocessed with the new pipeline
         self.threshold_oscillation = np.array(
-            [-3.6436, 0.2917, 9.3565, 17.9514, 28.7061, 42.6798, 61.8248]
+            [-4.06, 0.307, 4.88, 9.67, 14.67, 19.92, 25.43]
         )
         self.threshold_rbc = np.array([0.066, 0.250, 0.453, 0.675, 0.956]) / 2.0
 

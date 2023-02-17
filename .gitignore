@@ -166,3 +166,6 @@ data/*
 
 # Ignore all tests
 **/test_*.py
+
+# ignore r stats folder 
+r/**

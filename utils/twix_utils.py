@@ -80,7 +80,7 @@ def get_TR_dissolved(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
         TR in seconds
     """
     try:
-        return 2 * twix_obj.hdr.Config.TR * 1e-6
+        return 2 * float(twix_obj.hdr.Config.TR) * 1e-6
     except:
         pass
     try:
@@ -391,11 +391,11 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
     # get the scan date
     scan_date = get_scan_date(twix_obj=twix_obj)
     YYYY, MM, DD = scan_date.split("-")
-    cur_datetime = datetime.datetime(int(YYYY), int(MM), int(DD))
+    scan_datetime = datetime.datetime(int(YYYY), int(MM), int(DD))
     # check the flip angle and scan date to get the data
     if flip_angle_dissolved == 12:
         if raw_fids.shape[0] == 4200:
-            logging.info("Reading in fast dixon data on Siemens Trio.")
+            logging.info("Reading in fast dixon data on Siemens Prisma.")
             data_gas = raw_fids[0::2, :]
             data_dis = raw_fids[1::2, :]
             n_frames = data_dis.shape[0]
@@ -404,6 +404,17 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
             grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
         else:
             raise ValueError("Cannot get data from 'fast' dixon twix object.")
+    elif flip_angle_dissolved == 15:
+        if raw_fids.shape[0] == 2430:
+            logging.info("Reading in medium dixon data on Siemens Prisma.")
+            data_gas = raw_fids[:-30][0::2, :]
+            data_dis = raw_fids[:-30][1::2, :]
+            n_frames = data_dis.shape[0]
+            n_skip_start = 0
+            n_skip_end = 0
+            grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
+        else:
+            raise ValueError("Cannot get data from 'medium' dixon twix object.")
     elif flip_angle_dissolved == 20:
         if raw_fids.shape[0] == 2030:
             logging.info("Reading in 'normal' dixon data on Siemens Prisma.")
@@ -413,22 +424,41 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
             n_skip_start = 0
             n_skip_end = 0
             grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
-        elif raw_fids.shape[0] == 2002 and cur_datetime > datetime.datetime(2018, 5, 1):
-            logging.info("Reading in 'normal' dixon data on Siemens Trio.")
-            data_gas = raw_fids[:-2][2::2, :]
-            data_dis = raw_fids[:-2][3::2, :]
-            n_frames = 1001
+        elif raw_fids.shape[0] == 2002:
+            if scan_datetime > datetime.datetime(
+                2018, 5, 1
+            ) or scan_datetime <= datetime.datetime(2017, 12, 4):
+                logging.info("Reading in 'normal' dixon data on Siemens Trio.")
+                data_gas = raw_fids[:-2][2::2, :]
+                data_dis = raw_fids[:-2][3::2, :]
+                n_frames = 1001
+                n_skip_start = 1
+                n_skip_end = 1
+                grad_delay_x, grad_delay_y, grad_delay_z = 0, -4, -3
+            else:
+                logging.info("Reading in 'normal' dixon data on Siemens Trio.")
+                data_gas = raw_fids[:-2][2::2, :]
+                data_dis = raw_fids[:-2][3::2, :]
+                n_frames = 1001
+                n_skip_start = 1
+                n_skip_end = 1
+                grad_delay_x, grad_delay_y, grad_delay_z = 24, 22, 22
+        elif raw_fids.shape[0] == 2032:
+            logging.info("Reading in normal dixon on Siemens Trio w/ bonus spectra.")
+            data_gas = raw_fids[:-32][2::2, :]
+            data_dis = raw_fids[:-32][3::2, :]
+            n_frames = 1016
             n_skip_start = 1
-            n_skip_end = 1
+            n_skip_end = 16
             grad_delay_x, grad_delay_y, grad_delay_z = 0, -4, -3
-        elif raw_fids.shape[0] == 2002 and cur_datetime < datetime.datetime(2018, 5, 1):
-            logging.info("Reading in 'normal' dixon data on Siemens Trio.")
-            data_gas = raw_fids[:-2][2::2, :]
-            data_dis = raw_fids[:-2][3::2, :]
-            n_frames = 1001
-            n_skip_start = 1
-            n_skip_end = 1
-            grad_delay_x, grad_delay_y, grad_delay_z = 24, 22, 22
+        elif raw_fids.shape[0] == 2000:
+            logging.info("Reading in normal dixon on Siemens Trio 2007 or 2008.")
+            data_gas = raw_fids[0::2, :] * np.exp(1j * np.pi / 2)
+            data_dis = raw_fids[1::2, :] * np.exp(1j * np.pi / 2)
+            n_frames = 1000
+            n_skip_start = 0
+            n_skip_end = 0
+            grad_delay_x, grad_delay_y, grad_delay_z = 0, -4, -3
         else:
             raise ValueError("Cannot get data from normal dixon twix object.")
     else:

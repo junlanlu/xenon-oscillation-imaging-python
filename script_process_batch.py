@@ -11,7 +11,7 @@ from main import oscillation_mapping_readin, oscillation_mapping_reconstruction
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("cohort", "healthy", "cohort folder name in data config folder")
+flags.DEFINE_string("cohort", "healthy", "cohort folder name in config folder")
 CONFIG_PATH = "config/"
 
 
@@ -25,6 +25,8 @@ def main(argv):
         subjects = glob.glob(os.path.join(CONFIG_PATH, "healthy", "*py"))
     elif FLAGS.cohort == "cteph":
         subjects = glob.glob(os.path.join(CONFIG_PATH, "cteph", "*py"))
+    elif FLAGS.cohort == "ild":
+        subjects = glob.glob(os.path.join(CONFIG_PATH, "ild", "*py"))
     elif FLAGS.cohort == "all":
         subjects = glob.glob(os.path.join(CONFIG_PATH, "healthy", "*py"))
         subjects += glob.glob(os.path.join(CONFIG_PATH, "cteph", "*py"))
@@ -38,10 +40,16 @@ def main(argv):
             )
             config = config_obj.get_config()
             logging.info("Processing subject: %s", config.subject_id)
-            if config.processes.oscillation_mapping_recon:
+            if FLAGS.force_recon:
                 oscillation_mapping_reconstruction(config)
-            else:
+            elif FLAGS.force_reading:
                 oscillation_mapping_readin(config)
+            elif config.processes.oscillation_mapping_reconstruction:
+                oscillation_mapping_reconstruction(config)
+            elif config.processes.oscillation_mapping_readin:
+                oscillation_mapping_readin(config)
+            else:
+                pass
         except:
             logging.warning("Failed to process subject: %s", subject)
 

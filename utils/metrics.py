@@ -100,7 +100,7 @@ def bin_percentage(image: np.ndarray, bins: np.ndarray) -> float:
             and Bin 1 is the lowest bin, etc.
         bins: np.ndarray list of bins to include in the percentage calculation.
     """
-    return np.sum(np.isin(image, bins)) / np.sum(image > 0)
+    return 100 * np.sum(np.isin(image, bins)) / np.sum(image > 0)
 
 
 def mean_oscillation_percentage(image: np.ndarray, mask: np.ndarray) -> float:
