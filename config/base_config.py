@@ -11,19 +11,30 @@ from utils import constants
 
 
 class Config(config_dict.ConfigDict):
-    """Base config file."""
+    """Base config file.
+
+    Attributes:
+        data_dir: str, path to the data directory
+        manual_seg_filepath: str, path to the manual segmentation nifti file
+        processes: Process, the evaluation processes
+        params: Params, the important parameters
+        platform: Platform, the scanner vendor platform
+        scan_type: str, the scan type
+        segmentation_key: str, the segmentation key
+        site: str, the scan site
+        subject_id: str, the subject id
+        rbc_m_ratio: float, the RBC to M ratio
+    """
 
     def __init__(self):
         """Initialize config parameters."""
         super().__init__()
         self.data_dir = ""
-        self.filepath_twix_dyn = ""
-        self.filepath_twix_dis = ""
         self.manual_seg_filepath = ""
         self.processes = Process()
         self.recon = Recon()
         self.params = Params()
-        self.platform = constants.Platform
+        self.platform = constants.Platform.SIEMENS
         self.scan_type = constants.ScanType.NORMALDIXON.value
         self.segmentation_key = constants.SegmentationKey.CNN_VENT.value
         self.site = constants.Site.DUKE.value
@@ -32,7 +43,14 @@ class Config(config_dict.ConfigDict):
 
 
 class Process(object):
-    """Define the evaluation processes."""
+    """Define the evaluation processes.
+
+    Attributes:
+        oscillation_mapping_recon: bool, whether to perform oscillation mapping
+            with reconstruction
+        oscillation_mapping_readin: bool, whether to perform oscillation mapping
+            by reading in the mat file
+    """
 
     def __init__(self):
         """Initialize the process parameters."""
@@ -41,7 +59,17 @@ class Process(object):
 
 
 class Recon(object):
-    """Define reconstruction configurations."""
+    """Define reconstruction configurations.
+
+    Attributes:
+        kernel_sharpness_lr: float, the kernel sharpness for low resolution, higher
+            SNR images
+        kernel_sharpness_hr: float, the kernel sharpness for high resolution, lower
+            SNR images
+        n_skip_start: int, the number of frames to skip at the beginning
+        n_skip_end: int, the number of frames to skip at the end
+        key_radius: int, the key radius for the keyhole image
+    """
 
     def __init__(self):
         """Initialize the reconstruction parameters."""
@@ -50,13 +78,17 @@ class Recon(object):
         self.n_skip_start = 100
         self.n_skip_end = 0
         self.key_radius = 9
-        self.key_radius_percentage = 30
-        self.oscillation_mapping_readin = False
         self.recon_size = 128
 
 
 class Params(object):
-    """Define important parameters."""
+    """Define important parameters.
+
+    Attributes:
+        threshold_oscillation: np.ndarray, the oscillation amplitude thresholds for
+            binning
+        threshold_rbc: np.ndarray, the RBC thresholds for binning
+    """
 
     def __init__(self):
         """Initialize the reconstruction parameters."""

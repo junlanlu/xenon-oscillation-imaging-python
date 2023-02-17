@@ -31,7 +31,41 @@ class Subject(object):
 
     Attributes:
         config (config_dict.ConfigDict): config dict
-
+        data_dissolved (np.array): dissolved-phase data of shape
+            (n_projections, n_points)
+        data_dis_high (np.array): high-key dissolved-phase data of shape
+            (n_projections, n_points)
+        data_dis_low (np.array): low-key dissolved-phase data of shape
+            (n_projections, n_points)
+        data_gas (np.array): gas-phase data of shape (n_projections, n_points)
+        dict_dis (dict): dictionary of dissolved-phase data and metadata
+        dict_dyn (dict): dictionary of dynamic spectroscopy data and metadata
+        high_indices (np.array): indices of high projections of shape (n, )
+        low_indices (np.array): indices of low projections of shape (n, )
+        image_dissolved (np.array): dissolved-phase image
+        image_dissolved_norm (np.array): dissolved-phase image reconstructed with
+            the data normalized by gas-phase k0
+        image_gas (np.array): gas-phase image
+        image_membrane (np.array): membrane image
+        image_membrane2gas (np.array): membrane image normalized by gas-phase image
+        image_rbc (np.array): RBC image
+        image_rbc_norm (np.array): RBC image normalized of image_dissolved_norm
+        image_rbc2gas (np.array): RBC image normalized by gas-phase image
+        image_rbc_high (np.array): RBC image reconstructed with high-key data
+        image_rbc_low (np.array): RBC image reconstructed with low-key data
+        image_rbc_osc (np.array): RBC oscillation amplitude image
+        image_rbc_osc_binned (np.array): RBC oscillation amplitude image binned
+        low_indices (np.array): indices of low projections of shape (n, )
+        mask (np.array): thoracic cavity mask
+        mask_rbc (np.array): thoracic cavity mask with low SNR RBC voxels removed
+        rbc_m_ratio (float): RBC to M ratio
+        rbc_m_ratio_high (float): RBC to M ratio of high-key data
+        rbc_m_ratio_low (float): RBC to M ratio of low-key data
+        stats_dict (dict): dictionary of statistics
+        traj_dissolved (np.array): dissolved-phase trajectory of shape
+            (n_projections, n_points, 3)
+        traj_gas (np.array): gas-phase trajectory of shape
+            (n_projections, n_points, 3)
     """
 
     def __init__(self, config: base_config.Config):
@@ -58,12 +92,11 @@ class Subject(object):
         self.image_rbc_osc = np.array([0.0])
         self.image_rbc_osc_binned = np.array([0.0])
         self.low_indices = np.array([0.0])
-        self.manual_segmentation_filepath = str(config.manual_seg_filepath)
         self.mask = np.array([0.0])
+        self.mask_rbc = np.array([0.0])
         self.rbc_m_ratio = 0.0
         self.rbc_m_ratio_high = 0.0
         self.rbc_m_ratio_low = 0.0
-        self.segmentation_key = str(config.segmentation_key)
         self.stats_dict = {}
         self.traj_dissolved = np.array([])
         self.traj_dis_high = np.array([])
@@ -216,11 +249,13 @@ class Subject(object):
             data=self.data_dissolved_norm,
             traj=self.traj_dissolved,
             bin_indices=self.high_indices,
+            key_radius=self.config.recon.key_radius,
         )
         data_dis_low, traj_dis_low = pp.prepare_data_and_traj_keyhole(
             data=self.data_dissolved_norm,
             traj=self.traj_dissolved,
             bin_indices=self.low_indices,
+            key_radius=self.config.recon.key_radius,
         )
         # reconstruct data
         self.image_dissolved_high = reconstruction.reconstruct(
@@ -245,18 +280,19 @@ class Subject(object):
 
     def segmentation(self):
         """Segment the thoracic cavity."""
-        if self.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
+        if self.config.segmentation_key == constants.SegmentationKey.CNN_VENT.value:
             logging.info("Performing neural network segmenation.")
             self.mask = segmentation.predict(self.image_gas, erosion=5)
-        elif self.segmentation_key == constants.SegmentationKey.SKIP.value:
+        elif self.config.segmentation_key == constants.SegmentationKey.SKIP.value:
             self.mask = np.ones_like(self.image_gas)
-        elif self.segmentation_key == constants.SegmentationKey.MANUAL_VENT.value:
+        elif (
+            self.config.segmentation_key == constants.SegmentationKey.MANUAL_VENT.value
+        ):
             logging.info("loading mask file specified by the user.")
             try:
-                mask = glob.glob(self.manual_segmentation_filepath)[0]
-                self.mask = np.squeeze(np.array(nib.load(mask).get_fdata())).astype(
-                    bool
-                )
+                self.mask = np.squeeze(
+                    np.array(nib.load(self.config.manual_seg_filepath).get_fdata())
+                ).astype(bool)
             except ValueError:
                 logging.error("Invalid mask nifti file.")
         else:
@@ -431,4 +467,3 @@ class Subject(object):
         io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
         io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
         io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
-        return

@@ -43,8 +43,6 @@ def bin_rbc_oscillations(
     data_rbc_k0_proc = signal_utils.smooth(
         data=data_rbc_k0_proc, window_size=window_size
     )
-    # detrend residual exponential decay
-    # data_rbc_k0_proc = signal_utils.detrend(data_rbc_k0_proc)
     # apply low pass filter
     data_rbc_k0_proc = signal_utils.bandpass(
         data=data_rbc_k0_proc, lowcut=0.5, highcut=2.5, fs=1 / TR
