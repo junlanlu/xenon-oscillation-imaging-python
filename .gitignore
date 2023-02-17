@@ -169,3 +169,4 @@ data/*
 
 # ignore r stats folder 
 r/**
+!r/.gitkeep
