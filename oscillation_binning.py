@@ -9,11 +9,15 @@ from matplotlib import pyplot as plt
 matplotlib.use("TkAgg")
 import numpy as np
 
-from utils import signal_utils
+from utils import constants, signal_utils
 
 
 def bin_rbc_oscillations(
-    data_gas: np.ndarray, data_dissolved: np.ndarray, TR: float, rbc_m_ratio: float
+    data_gas: np.ndarray,
+    data_dissolved: np.ndarray,
+    TR: float,
+    rbc_m_ratio: float,
+    method=constants.BinningMethods.FIT_SINE,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     """Bin dissolved phase data into high and low signal bins.
 
@@ -43,10 +47,20 @@ def bin_rbc_oscillations(
     data_rbc_k0_proc = signal_utils.smooth(
         data=data_rbc_k0_proc, window_size=window_size
     )
-    # apply low pass filter
-    data_rbc_k0_proc = signal_utils.bandpass(
-        data=data_rbc_k0_proc, lowcut=0.5, highcut=2.5, fs=1 / TR
-    )
+    if method == constants.BinningMethods.BANDPASS:
+        # apply bandpass filter
+        data_rbc_k0_proc = signal_utils.bandpass(
+            data=data_rbc_k0_proc, lowcut=0.5, highcut=2.5, fs=1 / TR
+        )
+        # calculate the heart rate
+        heart_rate = signal_utils.get_heartrate(data_rbc_k0_proc, ts=TR)
+    elif method == constants.BinningMethods.FIT_SINE:
+        # fit data to biexponential decay and remove trend
+        data_rbc_k0_proc = signal_utils.detrend(data_rbc_k0_proc)
+        # fit sine wave to data
+        data_rbc_k0_proc = signal_utils.fit_sine(data_rbc_k0_proc)
+    else:
+        raise ValueError(f"Invalid binning method: {method}")
     # calculate the heart rate
     heart_rate = signal_utils.get_heartrate(data_rbc_k0_proc, ts=TR)
     # bin data to high and low signal bins

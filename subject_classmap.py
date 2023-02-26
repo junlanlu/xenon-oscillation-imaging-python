@@ -21,6 +21,7 @@ from utils import (
     plot,
     recon_utils,
     report,
+    signal_utils,
     spect_utils,
     traj_utils,
 )
@@ -437,6 +438,16 @@ class Subject(object):
             t=np.arange(self.data_rbc_k0.shape[0])
             * self.dict_dis[constants.IOFields.TR],
             data=self.data_rbc_k0,
+            path="tmp/data_rbc_k0_proc.png",
+            high=self.high_indices,
+            low=self.low_indices,
+        )
+        plot.plot_data_rbc_k0(
+            t=np.arange(self.data_rbc_k0.shape[0])
+            * self.dict_dis[constants.IOFields.TR],
+            data=signal_utils.dixon_decomposition(
+                self.data_dissolved, self.rbc_m_ratio
+            )[0][:, 0],
             path="tmp/data_rbc_k0.png",
             high=self.high_indices,
             low=self.low_indices,

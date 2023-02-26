@@ -174,6 +174,13 @@ class Methods(object):
     MEAN = "mean"
 
 
+class BinningMethods(object):
+    """Define the method to preprocess and bin RBC oscillation image."""
+
+    BANDPASS = "bandpass"
+    FIT_SINE = "fitsine"
+
+
 class StatsIOFields(object):
     """Statistic IO Fields."""
 

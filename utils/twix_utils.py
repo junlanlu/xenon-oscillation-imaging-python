@@ -402,6 +402,14 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
             n_skip_start = 0
             n_skip_end = 0
             grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
+        elif raw_fids.shape[0] == 4230:
+            logging.info("Reading in fast dixon data on Siemens Prisma.")
+            data_gas = raw_fids[:-30][0::2, :]
+            data_dis = raw_fids[:-30][1::2, :]
+            n_frames = data_dis.shape[0]
+            n_skip_start = 0
+            n_skip_end = 0
+            grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
         else:
             raise ValueError("Cannot get data from 'fast' dixon twix object.")
     elif flip_angle_dissolved == 15:
