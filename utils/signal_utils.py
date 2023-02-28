@@ -122,6 +122,52 @@ def inverse_boxcox(
     return np.power(boxcox_lambda * data + 1, 1 / boxcox_lambda) - scale_factor
 
 
+def remove_gasphase_contaminiation(
+    data_dissolved: np.ndarray,
+    data_gas: np.ndarray,
+    dwell_time: float,
+    freq_gas_acq_diss: float,
+    phase_gas_acq_diss: float,
+    area_gas_acq_diss: float,
+    fa_gas: float,
+) -> np.ndarray:
+    """Remove gas phase contamination in dissolved k-space.
+
+    Takes gas phase k-space and modifies it using NMR fits and gas phase k0
+    to produce the expected gas phase contamination k-space data which is
+    then removed from the initial contaminated dissolved phase k-space.
+
+    Args:
+        data_dissolved (np.ndarray): dissolved k-space data of shape
+            (n_projections, n_points)
+        data_gas (np.ndarray): gas phase k-space data of shape
+            (n_projections, n_points)
+        dwell_time (float): dwell time in seconds.
+        freq_gas_acq_diss (float): gas frequency offset in dissolved
+            spectra acquisition in Hz.
+        phase_gas_acq_diss (float): gas phase in dissolved spectra acquisition.
+            in degrees.
+        area_gas_acq_diss (float): gas area in dissolved spectra acquisition.
+        fa_gas (float): gas flip angle in degrees.
+    Returns:
+        Gas phase corrected dissolved k-space data of shape (n_projections, n_points)
+    Author: Matt Willmering
+    """
+    # step 0: calculate parameters
+    arr_t = dwell_time * np.arange(data_dissolved.shape[0])
+    # step 1: modulate contamination (gas) to dissolved frequency - first order
+    # phase approximation
+    phase_shift1 = 2 * np.pi * freq_gas_acq_diss * arr_t  # calculate phase accumulation
+    contamination_kspace1 = data_gas * np.exp(1j * phase_shift1[:, np.newaxis])
+    # step 2: zero order phase shift of contamination estimation
+    phase_shift2 = phase_gas_acq_diss - np.mean(np.angle(data_gas))
+    contamination_kspace2 = contamination_kspace1 * np.exp(1j * phase_shift2)
+    # step 3: scale contamination estimation
+
+    # step 4: return subtracted contamination
+    return
+
+
 def dixon_decomposition(
     data_dissolved: np.ndarray,
     rbc_m_ratio: float,
