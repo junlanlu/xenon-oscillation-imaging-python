@@ -4,7 +4,7 @@ import pdb
 import sys
 
 sys.path.append("..")
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import numpy as np
 
@@ -108,7 +108,7 @@ def calculate_static_spectroscopy(
     n_avg_seconds: int = 1,
     method: str = "voigt",
     plot: bool = False,
-):
+) -> Tuple[float, Any]:
     """Fit static spectroscopy data to Voigt model and extract RBC:M ratio.
 
     The RBC:M ratio is defined as the ratio of the fitted RBC peak area to the membrane
@@ -125,13 +125,12 @@ def calculate_static_spectroscopy(
         plot (bool, optional): Plot the fit. Defaults to False.
 
     Returns:
-        RBC:M ratio
+        Tuple of RBC:M ratio and fit object
     """
     t = np.array(range(0, np.shape(fid)[0])) * dwell_time
     t_tr = np.array(range(0, np.shape(fid)[1])) * tr
 
     start_ind, _ = get_breathhold_indices(t=t_tr, start_time=2, end_time=10)
-    start_ind = 132
     # calculate number of FIDs to average
     if n_avg:
         n_avg = n_avg
@@ -179,4 +178,4 @@ def calculate_static_spectroscopy(
     if plot:
         fit_obj.plot_time_spect_fit()
     rbc_m_ratio = fit_obj.area[0] / np.sum(fit_obj.area[1])
-    return rbc_m_ratio
+    return rbc_m_ratio, fit_obj

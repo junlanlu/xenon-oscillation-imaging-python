@@ -17,7 +17,7 @@ def bin_rbc_oscillations(
     data_dissolved: np.ndarray,
     TR: float,
     rbc_m_ratio: float,
-    method=constants.BinningMethods.FIT_SINE,
+    method=constants.BinningMethods.BANDPASS,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     """Bin dissolved phase data into high and low signal bins.
 
@@ -35,12 +35,8 @@ def bin_rbc_oscillations(
     )
     data_rbc_k0, data_membrane_k0 = data_rbc[:, 0], data_membrane[:, 0]
     data_gas_k0 = data_gas[:, 0]
-    # normalize and detrend by gas k0
-    data_rbc_k0_proc = data_rbc_k0 / np.abs(data_gas_k0)
     # negate data if mean is negative
-    data_rbc_k0_proc = (
-        -data_rbc_k0_proc if np.mean(data_rbc_k0_proc) < 0 else data_rbc_k0_proc
-    )
+    data_rbc_k0_proc = -data_gas_k0 if np.mean(data_gas_k0) < 0 else data_gas_k0
     # smooth data
     window_size = int(1 / (5 * TR))
     window_size = window_size if window_size % 2 == 1 else window_size + 1
@@ -48,12 +44,12 @@ def bin_rbc_oscillations(
         data=data_rbc_k0_proc, window_size=window_size
     )
     if method == constants.BinningMethods.BANDPASS:
+        # normalize and detrend by gas k0
+        data_rbc_k0_proc = data_rbc_k0 / np.abs(data_gas_k0)
         # apply bandpass filter
         data_rbc_k0_proc = signal_utils.bandpass(
             data=data_rbc_k0_proc, lowcut=0.5, highcut=2.5, fs=1 / TR
         )
-        # calculate the heart rate
-        heart_rate = signal_utils.get_heartrate(data_rbc_k0_proc, ts=TR)
     elif method == constants.BinningMethods.FIT_SINE:
         # fit data to biexponential decay and remove trend
         data_rbc_k0_proc = signal_utils.detrend(data_rbc_k0_proc)

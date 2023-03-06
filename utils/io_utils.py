@@ -66,6 +66,7 @@ def get_dyn_twix_files(path: str) -> str:
             glob.glob(os.path.join(path, "**cali**.dat"))
             + glob.glob(os.path.join(path, "**dynamic**.dat"))
             + glob.glob(os.path.join(path, "**Dynamic**.dat"))
+            + glob.glob(os.path.join(path, "**dyn**.dat"))
         )[0]
     except:
         raise ValueError("Can't find twix file in path.")
@@ -83,6 +84,24 @@ def get_dis_twix_files(path: str) -> str:
         return (
             glob.glob(os.path.join(path, "**dixon***.dat"))
             + glob.glob(os.path.join(path, "**Dixon***.dat"))
+        )[0]
+    except:
+        raise ValueError("Can't find twix file in path.")
+
+
+def get_ute_twix_files(path: str) -> str:
+    """Get list of gas exchange twix files.
+
+    Args:
+        path: str directory path of twix files
+    Returns:
+        str file path of twix file
+    """
+    try:
+        return (
+            glob.glob(os.path.join(path, "**1H***.dat"))
+            + glob.glob(os.path.join(path, "**BHUTE***.dat"))
+            + glob.glob(os.path.join(path, "**ute***.dat"))
         )[0]
     except:
         raise ValueError("Can't find twix file in path.")
@@ -202,6 +221,44 @@ def read_dis_twix(path: str) -> Dict[str, Any]:
         constants.IOFields.SOFTWARE_VERSION: twix_utils.get_software_version(twix_obj),
         constants.IOFields.TE90: twix_utils.get_TE90(twix_obj),
         constants.IOFields.TR: twix_utils.get_TR_dissolved(twix_obj),
+    }
+
+
+def read_ute_twix(path: str) -> Dict[str, Any]:
+    """Read proton ute imaging twix file.
+
+    Args:
+        path: str file path of twix file
+    Returns: dictionary containing data and metadata extracted from the twix file.
+    This includes:
+        TODO
+    """
+    try:
+        twix_obj = mapvbvd.mapVBVD(path)
+    except:
+        raise ValueError("Invalid twix file.")
+    try:
+        twix_obj.image.squeeze = True
+    except:
+        # this is old data, need to get the 2nd element
+        twix_obj = twix_obj[1]
+    try:
+        twix_obj.image.squeeze = True
+        twix_obj.image.flagIgnoreSeg = True
+        twix_obj.image.flagRemoveOS = False
+    except:
+        raise ValueError("Cannot get data from twix object.")
+    data_dict = twix_utils.get_ute_data(twix_obj=twix_obj)
+
+    return {
+        constants.IOFields.DWELL_TIME: twix_utils.get_dwell_time(twix_obj),
+        constants.IOFields.FIDS: data_dict[constants.IOFields.FIDS],
+        constants.IOFields.RAMP_TIME: twix_utils.get_ramp_time(twix_obj),
+        constants.IOFields.GRAD_DELAY_X: data_dict[constants.IOFields.GRAD_DELAY_X],
+        constants.IOFields.GRAD_DELAY_Y: data_dict[constants.IOFields.GRAD_DELAY_Y],
+        constants.IOFields.GRAD_DELAY_Z: data_dict[constants.IOFields.GRAD_DELAY_Z],
+        constants.IOFields.N_FRAMES: data_dict[constants.IOFields.N_FRAMES],
+        constants.IOFields.ORIENTATION: twix_utils.get_orientation(twix_obj),
     }
 
 

@@ -118,6 +118,7 @@ def get_excitation_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the excitation frequency in MHz.
 
     See: https://mriquestions.com/center-frequency.html for definition of center freq.
+    Return 218.0 if not found.
 
     Args:
         twix_obj: twix object returned from mapVBVD function.
@@ -142,10 +143,7 @@ def get_excitation_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     except:
         logging.warning("Could not get excitation frequency from twix object.")
 
-    return round(
-        excitation
-        / (constants.GRYOMAGNETIC_RATIO * get_field_strength(twix_obj=twix_obj))
-    )
+    return 218.0
 
 
 def get_field_strength(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
@@ -353,10 +351,6 @@ def get_dyn_dissolved_fids(
     Returns:
         dissolved phase FIDs in shape (number of points in ray, number of projections).
     """
-    twix_obj.image.squeeze = True
-    twix_obj.image.flagIgnoreSeg = True
-    twix_obj.image.flagRemoveOS = False
-
     raw_fids = twix_obj.image[""].astype(np.cdouble)
     return raw_fids[:, 0 : -(1 + n_skip_end)]
 
@@ -383,9 +377,6 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
         7. gradient delay y in microseconds.
         8. gradient delay z in microseconds.
     """
-    twix_obj.image.squeeze = True
-    twix_obj.image.flagIgnoreSeg = True
-    twix_obj.image.flagRemoveOS = False
     raw_fids = np.transpose(twix_obj.image.unsorted().astype(np.cdouble))
     flip_angle_dissolved = get_flipangle_dissolved(twix_obj)
     # get the scan date
@@ -480,4 +471,39 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
         constants.IOFields.GRAD_DELAY_X: grad_delay_x,
         constants.IOFields.GRAD_DELAY_Y: grad_delay_y,
         constants.IOFields.GRAD_DELAY_Z: grad_delay_z,
+    }
+
+
+def get_ute_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
+    """Get the UTE FIDs from twix object.
+
+    For reconstruction, we also need important information like the gradient delay,
+    number of fids in each phase, etc. Note, this cannot be trivially read from the
+    twix object, and need to hard code some values. For example, the gradient delay
+    is slightly different depending on the scanner.
+    Args:
+        twix_obj: twix object returned from mapVBVD function
+    Returns:
+        a dictionary containing
+        1. UTE FIDs in shape (number of projections,
+            number of points in ray).
+        2. number of FIDs to use for generating trajectory.
+        3. gradient delay x in microseconds.
+        4. gradient delay y in microseconds.
+        5. gradient delay z in microseconds.
+    """
+    raw_fids = twix_obj.image.unsorted().astype(np.cdouble)
+
+    if raw_fids.ndim == 3:
+        data = np.transpose(np.squeeze(raw_fids[:, 0, :]))
+        data = data[:4600, :]
+    else:
+        data = np.transpose(raw_fids)
+
+    return {
+        constants.IOFields.FIDS: data,
+        constants.IOFields.N_FRAMES: data.shape[0],
+        constants.IOFields.GRAD_DELAY_X: -5,
+        constants.IOFields.GRAD_DELAY_Y: -5,
+        constants.IOFields.GRAD_DELAY_Z: -5,
     }

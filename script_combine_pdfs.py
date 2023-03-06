@@ -18,6 +18,10 @@ def get_pdfs() -> List[str]:
         pdfs = glob.glob(os.path.join("data", "healthy", "report_clinical.pdf"))
     elif FLAGS.cohort == "cteph":
         pdfs = glob.glob(os.path.join("data", "cteph", "report_clinical.pdf"))
+    elif FLAGS.cohort == "ild":
+        pdfs = glob.glob(os.path.join("data", "ild", "report_clinical.pdf"))
+    elif FLAGS.cohort == "tyvaso":
+        pdfs = glob.glob(os.path.join("data", "tyvaso", "report_clinical.pdf"))
     elif FLAGS.cohort == "all":
         pdfs = glob.glob("data/**/report_clinical.pdf", recursive=True)
     else:

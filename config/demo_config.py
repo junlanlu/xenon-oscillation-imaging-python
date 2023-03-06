@@ -19,7 +19,7 @@ class Config(base_config.Config):
     def __init__(self):
         """Initialize config parameters."""
         super().__init__()
-        self.data_dir = "/mnt/d/Patients/007-028B/"
+        self.data_dir = "assets/twix/"
         self.platform = constants.Platform.SIEMENS.value
         self.scan_type = constants.ScanType.NORMALDIXON.value
         self.segmentation_key = constants.SegmentationKey.CNN_VENT.value

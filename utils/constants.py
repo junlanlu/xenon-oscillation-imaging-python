@@ -27,6 +27,7 @@ class IOFields(object):
     FA_GAS = "fa_gas"
     FIDS_DIS = "fids_dis"
     FIDS_GAS = "fids_gas"
+    FIDS = "fids"
     FOV = "fov"
     FOV = "fov"
     FREQ_CENTER = "freq_center"

@@ -39,8 +39,10 @@ class Subject(object):
         data_dis_low (np.array): low-key dissolved-phase data of shape
             (n_projections, n_points)
         data_gas (np.array): gas-phase data of shape (n_projections, n_points)
+        data_ute (np.array): UTE proton data of shape (n_projections, n_points)
         dict_dis (dict): dictionary of dissolved-phase data and metadata
         dict_dyn (dict): dictionary of dynamic spectroscopy data and metadata
+        dict_ute (dict): dictionary of UTE proton data and metadata
         high_indices (np.array): indices of high projections of shape (n, )
         low_indices (np.array): indices of low projections of shape (n, )
         image_dissolved (np.array): dissolved-phase image
@@ -56,6 +58,7 @@ class Subject(object):
         image_rbc_low (np.array): RBC image reconstructed with low-key data
         image_rbc_osc (np.array): RBC oscillation amplitude image
         image_rbc_osc_binned (np.array): RBC oscillation amplitude image binned
+        image_ute (np.array): UTE proton image
         low_indices (np.array): indices of low projections of shape (n, )
         mask (np.array): thoracic cavity mask
         mask_rbc (np.array): thoracic cavity mask with low SNR RBC voxels removed
@@ -67,6 +70,7 @@ class Subject(object):
             (n_projections, n_points, 3)
         traj_gas (np.array): gas-phase trajectory of shape
             (n_projections, n_points, 3)
+        traj_ute (np.array): UTE proton trajectory of shape
     """
 
     def __init__(self, config: base_config.Config):
@@ -85,6 +89,7 @@ class Subject(object):
         self.image_gas = np.array([0.0])
         self.image_membrane = np.array([0.0])
         self.image_membrane2gas = np.array([0.0])
+        self.image_ute = np.array([0.0])
         self.image_rbc = np.array([0.0])
         self.image_rbc_norm = np.array([0.0])
         self.image_rbc2gas = np.array([0.0])
@@ -117,6 +122,10 @@ class Subject(object):
         self.dict_dis = io_utils.read_dis_twix(
             io_utils.get_dis_twix_files(str(self.config.data_dir))
         )
+        if self.config.recon.recon_proton:
+            self.dict_ute = io_utils.read_ute_twix(
+                io_utils.get_ute_twix_files(str(self.config.data_dir))
+            )
 
     def read_mat_file(self):
         """Read in mat file of reconstructed images.
@@ -153,7 +162,7 @@ class Subject(object):
             logging.info("Using manual RBC:M ratio of {}".format(self.rbc_m_ratio))
         else:
             logging.info("Calculating RBC:M ratio from static spectroscopy.")
-            self.rbc_m_ratio = spect_utils.calculate_static_spectroscopy(
+            self.rbc_m_ratio, _ = spect_utils.calculate_static_spectroscopy(
                 fid=self.dict_dyn[constants.IOFields.FIDS_DIS],
                 dwell_time=self.dict_dyn[constants.IOFields.DWELL_TIME],
                 tr=self.dict_dyn[constants.IOFields.TR],
@@ -167,12 +176,14 @@ class Subject(object):
 
         Also, calculates the scaling factor for the trajectory.
         """
+        if self.config.remove_contamination:
+            self.dict_dis = pp.remove_contamination(self.dict_dyn, self.dict_dis)
         (
             self.data_dissolved,
             self.traj_dissolved,
             self.data_gas,
             self.traj_gas,
-        ) = pp.prepare_data_and_traj(self.dict_dis)
+        ) = pp.prepare_data_and_traj_interleaved(self.dict_dis)
         self.data_dissolved, self.traj_dissolved = pp.truncate_data_and_traj(
             self.data_dissolved,
             self.traj_dissolved,
@@ -192,6 +203,30 @@ class Subject(object):
         )
         self.traj_dissolved *= self.traj_scaling_factor
         self.traj_gas *= self.traj_scaling_factor
+        if self.config.recon.recon_proton:
+            (
+                self.data_ute,
+                self.traj_ute,
+            ) = pp.prepare_data_and_traj(self.dict_ute)
+            self.data_ute, self.traj_ute = pp.truncate_data_and_traj(
+                self.data_ute,
+                self.traj_ute,
+                n_skip_start=0,
+                n_skip_end=0,
+            )
+            self.traj_ute *= self.traj_scaling_factor
+
+    def reconstruction_ute(self):
+        """Reconstruct the UTE image."""
+        self.image_ute = reconstruction.reconstruct(
+            data=(recon_utils.flatten_data(self.data_ute)),
+            traj=recon_utils.flatten_traj(self.traj_ute),
+            kernel_sharpness=float(self.config.recon.kernel_sharpness_hr),
+            kernel_extent=9 * float(self.config.recon.kernel_sharpness_hr),
+        )
+        self.image_ute = img_utils.flip_and_rotate_image(
+            self.image_ute, orientation=constants.Orientation.CORONAL
+        )
 
     def reconstruction_gas(self):
         """Reconstruct the gas phase image."""
@@ -460,14 +495,14 @@ class Subject(object):
 
     def write_stats_to_csv(self):
         """Write statistics to file."""
-        io_utils.export_subject_csv(self.stats_dict, path="data/stats_clinical.csv")
+        io_utils.export_subject_csv(self.stats_dict, path="data/stats_all.csv")
 
     def save_subject_to_mat(self):
         """Save the instance variables into a mat file."""
         path = os.path.join(self.config.data_dir, self.config.subject_id + ".mat")
         io_utils.export_subject_mat(self, path)
 
-    def savefiles(self):
+    def save_files(self):
         """Save select images to nifti files and instance variable to mat."""
         io_utils.export_nii(self.image_rbc_osc_binned, "tmp/osc_binned.nii")
         io_utils.export_nii(self.image_rbc_binned, "tmp/rbc_binned.nii")
@@ -478,3 +513,5 @@ class Subject(object):
         io_utils.export_nii(self.mask_rbc.astype(float), "tmp/mask_rbc.nii")
         io_utils.export_nii(self.image_rbc_osc * self.mask, "tmp/osc.nii")
         io_utils.export_nii(np.abs(self.image_dissolved), "tmp/dissolved.nii")
+        if self.config.recon.recon_proton:
+            io_utils.export_nii(np.abs(self.image_ute), "tmp/proton.nii")

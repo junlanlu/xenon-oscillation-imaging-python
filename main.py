@@ -27,6 +27,8 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
     subject.calculate_rbc_m_ratio()
     logging.info("Reconstructing images")
     subject.preprocess()
+    if config.recon.recon_proton:
+        subject.reconstruction_ute()
     subject.reconstruction_gas()
     subject.reconstruction_dissolved()
     subject.reconstruction_rbc_oscillation()
@@ -42,7 +44,7 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
     subject.write_stats_to_csv()
     subject.generate_figures()
     subject.generate_pdf()
-
+    subject.save_files()
     logging.info("Complete")
 
 
@@ -88,6 +90,8 @@ def main(argv):
     elif config.processes.oscillation_mapping_readin:
         logging.info("Oscillation imaging mapping with reconstruction.")
         oscillation_mapping_readin(config)
+    else:
+        pass
 
 
 if __name__ == "__main__":

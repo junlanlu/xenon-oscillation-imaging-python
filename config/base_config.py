@@ -16,6 +16,7 @@ class Config(config_dict.ConfigDict):
     Attributes:
         data_dir: str, path to the data directory
         manual_seg_filepath: str, path to the manual segmentation nifti file
+        remove_contamination: bool, whether to remove gas contamination
         processes: Process, the evaluation processes
         params: Params, the important parameters
         platform: Platform, the scanner vendor platform
@@ -40,6 +41,7 @@ class Config(config_dict.ConfigDict):
         self.site = constants.Site.DUKE.value
         self.subject_id = "test"
         self.rbc_m_ratio = 0.0
+        self.remove_contamination = True
 
 
 class Process(object):
@@ -79,6 +81,7 @@ class Recon(object):
         self.n_skip_end = 0
         self.key_radius = 9
         self.recon_size = 128
+        self.recon_proton = False
 
 
 class Params(object):

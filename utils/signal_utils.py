@@ -8,6 +8,19 @@ import scipy.signal as signal
 import scipy.stats as stats
 
 
+def _movmean(x: np.ndarray, n: int) -> np.ndarray:
+    """Compute moving mean of x over n points.
+
+    Args:
+        x (np.ndarray): input data of shape (n,)
+        n (int): number of points to average over
+
+    Returns:
+        np.ndarray: moving mean of shape (n,)
+    """
+    return np.convolve(x, np.ones((n,)) / n, mode="same")
+
+
 def _getxygrid(x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Get x and y grid.
 
@@ -122,7 +135,7 @@ def inverse_boxcox(
     return np.power(boxcox_lambda * data + 1, 1 / boxcox_lambda) - scale_factor
 
 
-def remove_gasphase_contaminiation(
+def remove_gasphase_contamination(
     data_dissolved: np.ndarray,
     data_gas: np.ndarray,
     dwell_time: float,
@@ -152,20 +165,26 @@ def remove_gasphase_contaminiation(
     Returns:
         Gas phase corrected dissolved k-space data of shape (n_projections, n_points)
     Author: Matt Willmering
+    Paper: https://pubmed.ncbi.nlm.nih.gov/33665905/
     """
     # step 0: calculate parameters
-    arr_t = dwell_time * np.arange(data_dissolved.shape[0])
+    arr_t = dwell_time * np.arange(data_dissolved.shape[1])
     # step 1: modulate contamination (gas) to dissolved frequency - first order
     # phase approximation
     phase_shift1 = 2 * np.pi * freq_gas_acq_diss * arr_t  # calculate phase accumulation
-    contamination_kspace1 = data_gas * np.exp(1j * phase_shift1[:, np.newaxis])
+    contamination_kspace1 = data_gas * np.exp(1j * phase_shift1)
     # step 2: zero order phase shift of contamination estimation
-    phase_shift2 = phase_gas_acq_diss - np.mean(np.angle(data_gas))
-    contamination_kspace2 = contamination_kspace1 * np.exp(1j * phase_shift2)
+    phase_shift2 = phase_gas_acq_diss - 180 / np.pi * np.mean(np.angle(data_gas[:, 0]))
+    contamination_kspace2 = contamination_kspace1 * np.exp(
+        1j * np.pi / 180 * phase_shift2
+    )
     # step 3: scale contamination estimation
-
+    scale_factor = area_gas_acq_diss / _movmean(np.abs(data_gas[:, 0]), 100)[-1]
+    contamination_kspace3 = (
+        contamination_kspace2 * scale_factor / np.cos(np.pi / 180 * fa_gas)
+    )
     # step 4: return subtracted contamination
-    return
+    return data_dissolved - contamination_kspace3
 
 
 def dixon_decomposition(
