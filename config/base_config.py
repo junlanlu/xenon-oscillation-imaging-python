@@ -41,7 +41,7 @@ class Config(config_dict.ConfigDict):
         self.site = constants.Site.DUKE.value
         self.subject_id = "test"
         self.rbc_m_ratio = 0.0
-        self.remove_contamination = True
+        self.remove_contamination = False
 
 
 class Process(object):
@@ -80,6 +80,7 @@ class Recon(object):
         self.n_skip_start = 100
         self.n_skip_end = 0
         self.key_radius = 9
+        self.key_radius_pct = 0.3
         self.recon_size = 128
         self.recon_proton = False
 
@@ -101,7 +102,7 @@ class Params(object):
         # )
         # reprocessed with the new pipeline
         self.threshold_oscillation = np.array(
-            [-4.06, 0.307, 4.88, 9.67, 14.67, 19.92, 25.43]
+            [-2.02, 0.53, 3.66, 7.63, 12.99, 12.99, 12.07, 35.56]
         )
         self.threshold_rbc = np.array([0.066, 0.250, 0.453, 0.675, 0.956]) / 2.0
 

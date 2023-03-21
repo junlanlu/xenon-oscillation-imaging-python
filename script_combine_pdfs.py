@@ -15,18 +15,25 @@ flags.DEFINE_string("cohort", "all", "cohort folder name in data folder")
 def get_pdfs() -> List[str]:
     """Get all pdfs in the data/ folder."""
     if FLAGS.cohort == "healthy":
-        pdfs = glob.glob(os.path.join("data", "healthy", "report_clinical.pdf"))
+        pdfs = glob.glob(
+            os.path.join("data", "healthy", "**/report_clinical**.pdf"), recursive=True
+        )
     elif FLAGS.cohort == "cteph":
-        pdfs = glob.glob(os.path.join("data", "cteph", "report_clinical.pdf"))
+        pdfs = glob.glob(
+            os.path.join("data", "cteph", "**/report_clinical**.pdf"), recursive=True
+        )
     elif FLAGS.cohort == "ild":
-        pdfs = glob.glob(os.path.join("data", "ild", "report_clinical.pdf"))
+        pdfs = glob.glob(
+            os.path.join("data", "ild", "**/report_clinical**.pdf"), recursive=True
+        )
     elif FLAGS.cohort == "tyvaso":
-        pdfs = glob.glob(os.path.join("data", "tyvaso", "report_clinical.pdf"))
+        pdfs = glob.glob(
+            os.path.join("data", "tyvaso", "**/report_clinical**.pdf"), recursive=True
+        )
     elif FLAGS.cohort == "all":
         pdfs = glob.glob("data/**/report_clinical.pdf", recursive=True)
     else:
         raise ValueError("Invalid cohort name")
-
     pdfs.sort()
     return pdfs
 

@@ -173,6 +173,8 @@ class Methods(object):
 
     ELEMENTWISE = "elementwise"
     MEAN = "mean"
+    SMOOTH = "smooth"
+    BSPLINE = "bspline"
 
 
 class BinningMethods(object):
@@ -199,6 +201,9 @@ class StatsIOFields(object):
     PCT_OSC_NORMAL = "osc_normal"
     PCT_OSC_HIGH = "osc_high"
     PCT_OSC_MEAN = "osc_mean"
+    PCT_OSC_NEGATIVE = "osc_negative"
+    KEY_RADIUS = "key_radius"
+    N_POINTS = "n_points"
 
 
 class MatIOFields(object):

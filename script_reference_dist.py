@@ -15,6 +15,7 @@ from utils import io_utils, plot, signal_utils
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("cohort", "healthy", "cohort folder name in config folder")
+flags.DEFINE_bool("segmentation", False, "run segmentation again.")
 CONFIG_PATH = "config/"
 
 
@@ -28,7 +29,8 @@ def oscillation_mapping_analysis(config: base_config.Config) -> np.ndarray:
     """
     subject = Subject(config)
     subject.read_mat_file()
-    subject.segmentation()
+    if FLAGS.segmentation:
+        subject.segmentation()
     subject.dixon_decomposition()
     subject.dissolved_analysis()
     subject.dissolved_binning()
@@ -95,7 +97,7 @@ def main(argv):
 
     Compile the healthy reference distribution and get the thresholds.
     """
-    # compile_distribution()
+    compile_distribution()
     get_thresholds()
 
 

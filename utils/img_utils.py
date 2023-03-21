@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import skimage
-from scipy import ndimage
+from scipy import interpolate, ndimage
 
 from utils import constants
 
@@ -145,6 +145,17 @@ def divide_images(
     return out
 
 
+def smooth_image(image: np.ndarray, kernel: int = 11) -> np.ndarray:
+    """Smooth the image using a blurring kernel.
+
+    Args:
+        image (np.ndarray): 3D image to smooth.
+        kernel (int, optional): size of the kernel. Defaults to 5.
+    """
+    kernel = np.ones((kernel, kernel, kernel)) / (kernel**3)  # type: ignore
+    return ndimage.convolve(image, kernel, mode="constant")
+
+
 def correct_B0(
     image: np.ndarray, mask: np.ndarray, max_iterations: int = 100
 ) -> np.ndarray:
@@ -218,7 +229,7 @@ def calculate_rbc_oscillation(
     image_low: np.ndarray,
     image_total: np.ndarray,
     mask: np.ndarray,
-    method: str = constants.Methods.MEAN,
+    method: str = constants.Methods.SMOOTH,
 ) -> np.ndarray:
     """Calculate RBC oscillation.
 
@@ -241,5 +252,7 @@ def calculate_rbc_oscillation(
             * np.subtract(image_high, image_low)
             / np.abs(np.mean(image_total[mask > 0]))
         )
+    elif method == constants.Methods.SMOOTH:
+        return 100 * np.subtract(image_high, image_low) / smooth_image(image_total)
     else:
         raise ValueError("Invalid method: {}.".format(method))

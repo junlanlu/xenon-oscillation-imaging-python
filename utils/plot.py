@@ -272,7 +272,7 @@ def plot_data_rbc_k0(
     ax.plot(t[high], data[high], ".", color="C2", markersize=10)
     ax.plot(t[low], data[low], ".", color="C1", markersize=10)
     ax.plot(t, np.zeros((len(t), 1)), ".", color="k", linewidth=2)
-    ax.set_ylabel("Fraction of Total Pixels", fontsize=35)
+    ax.set_ylabel("Intensity (au)", fontsize=35)
     # set plot parameters
     plt.rc("axes", linewidth=4)
     plt.xticks([], [])

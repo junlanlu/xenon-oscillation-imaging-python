@@ -104,5 +104,20 @@ def bin_percentage(image: np.ndarray, bins: np.ndarray) -> float:
 
 
 def mean_oscillation_percentage(image: np.ndarray, mask: np.ndarray) -> float:
-    """Get the mean oscillation percentage of the image."""
+    """Get the mean oscillation percentage of the image.
+
+    Args:
+        image: np.ndarray. The oscillation image.
+        mask: np.ndarray. mask of the region of interest.
+    """
     return np.mean(image[mask])
+
+
+def negative_osc_percentage(image: np.ndarray, mask: np.ndarray) -> float:
+    """Get the percentage voxels of image inside mask that are negative.
+
+    Args:
+        image: np.ndarray. The oscillation image.
+        mask: np.ndarray. mask of the region of interest.
+    """
+    return 100 * np.sum(image[mask] < 0) / np.sum(mask)

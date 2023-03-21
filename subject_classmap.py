@@ -59,6 +59,7 @@ class Subject(object):
         image_rbc_osc (np.array): RBC oscillation amplitude image
         image_rbc_osc_binned (np.array): RBC oscillation amplitude image binned
         image_ute (np.array): UTE proton image
+        key_radius (int): radius of the keyhole in points
         low_indices (np.array): indices of low projections of shape (n, )
         mask (np.array): thoracic cavity mask
         mask_rbc (np.array): thoracic cavity mask with low SNR RBC voxels removed
@@ -97,6 +98,7 @@ class Subject(object):
         self.image_rbc_low = np.array([0.0])
         self.image_rbc_osc = np.array([0.0])
         self.image_rbc_osc_binned = np.array([0.0])
+        self.key_radius = 0
         self.low_indices = np.array([0.0])
         self.mask = np.array([0.0])
         self.mask_rbc = np.array([0.0])
@@ -139,7 +141,7 @@ class Subject(object):
         self.data_dissolved_norm = mdict["data_dissolved_norm"]
         self.data_rbc_k0 = mdict["data_rbc_k0"].flatten()
         self.high_indices = mdict["high_indices"].flatten()
-        self.mask = mdict["mask"]
+        self.mask = mdict["mask"].astype(bool)
         self.image_dissolved = mdict["image_dissolved"]
         self.image_dissolved_high = mdict["image_dissolved_high"]
         self.image_dissolved_low = mdict["image_dissolved_low"]
@@ -280,18 +282,20 @@ class Subject(object):
             rbc_m_ratio=self.rbc_m_ratio,
             TR=self.dict_dis[constants.IOFields.TR],
         )
+        # calculate the key radius
+        self.key_radius = self.config.recon.key_radius
         # prepare data and traj for reconstruction
         data_dis_high, traj_dis_high = pp.prepare_data_and_traj_keyhole(
             data=self.data_dissolved_norm,
             traj=self.traj_dissolved,
             bin_indices=self.high_indices,
-            key_radius=self.config.recon.key_radius,
+            key_radius=self.key_radius,
         )
         data_dis_low, traj_dis_low = pp.prepare_data_and_traj_keyhole(
             data=self.data_dissolved_norm,
             traj=self.traj_dissolved,
             bin_indices=self.low_indices,
-            key_radius=self.config.recon.key_radius,
+            key_radius=self.key_radius,
         )
         # reconstruct data
         self.image_dissolved_high = reconstruction.reconstruct(
@@ -431,6 +435,11 @@ class Subject(object):
             constants.StatsIOFields.PCT_OSC_DEFECTLOW: metrics.bin_percentage(
                 self.image_rbc_osc_binned, np.array([1, 2])
             ),
+            constants.StatsIOFields.PCT_OSC_NEGATIVE: metrics.negative_osc_percentage(
+                self.image_rbc_osc, self.mask_rbc
+            ),
+            constants.StatsIOFields.KEY_RADIUS: self.key_radius,
+            constants.StatsIOFields.N_POINTS: self.data_gas.shape[1],
         }
 
     def generate_figures(self):
@@ -490,7 +499,10 @@ class Subject(object):
 
     def generate_pdf(self):
         """Generate HTML and PDF files."""
-        path = os.path.join(self.config.data_dir, "report_clinical.pdf")
+        path = os.path.join(
+            self.config.data_dir,
+            "report_clinical_{}.pdf".format(self.config.subject_id),
+        )
         report.clinical(self.stats_dict, path=path)
 
     def write_stats_to_csv(self):

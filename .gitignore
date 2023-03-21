@@ -170,3 +170,9 @@ data/*
 # ignore r stats folder 
 r/**
 !r/.gitkeep
+
+# ignore r stats folder 
+simulations/data/**
+!simulations/data/.gitkeep
+
+# simulations

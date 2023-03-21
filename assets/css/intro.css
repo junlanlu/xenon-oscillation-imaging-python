@@ -1,0 +1,106 @@
+body {
+	background-color: white;
+	font-family: palatino;
+	font-weight: bold;
+	color: black;
+}
+.branch-warning {
+	width: 200px;
+	font-size: 15pt;
+	position: absolute;
+	right: 20px;
+	top: 20px;
+	color: red;
+}
+.title-container {
+	width: 1340px;
+	color: blue;
+	font-size: 28pt;
+	border: 10px;
+}
+
+.process_date_text {
+	font-size: 24pt;
+}
+
+.table-container {
+	width: 600px;
+	position: fixed;
+	top: 40px;
+	right: 700px;
+	margin-right: 6px;
+	font-size: 14pt;
+	float: left;
+}
+.table-container2 caption {
+	color: blue;
+	font-size: 22pt;
+	border: 2px;
+}
+.table-container2 {
+	width: 600px;
+	position: fixed;
+	top: 40px;
+	right: 0px;
+	margin-right: 6px;
+	font-size: 14pt;
+	float: left;
+}
+.table-container2 caption {
+	color: blue;
+	font-size: 22pt;
+	border: 2px;
+}
+
+.top-right {
+	position: fixed;
+	top: -302px;
+	right: -65px;
+	font-size: 18px;
+	color: blue;
+}
+
+p.train {
+	margin: 0;
+	font-size: 2.5vw;
+	background: rgb(250, 219, 216);
+}
+
+h1 {
+	font-size: 18pt;
+	color: black;
+}
+
+h2 {
+	font-size: 18pt;
+	color: black;
+}
+h5 {
+	font-size: 18pt;
+	color: black;
+}
+.space {
+	height: 5px;
+}
+
+td,
+th {
+	border: 1px solid #353131;
+	text-align: left center;
+	padding: 8px;
+	padding-top: 7px;
+	padding-bottom: 7px;
+}
+
+.white {
+	background-color: rgb(255, 255, 255);
+}
+.red {
+	background-color: rgb(253, 237, 236);
+}
+.silver {
+	background-color: rgb(213, 216, 220);
+}
+.green {
+	background-color: rgb(234, 250, 241);
+}

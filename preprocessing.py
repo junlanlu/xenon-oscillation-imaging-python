@@ -58,6 +58,9 @@ def prepare_data_and_traj(
             ramp_time=data_dict[constants.IOFields.RAMP_TIME],
             n_frames=data_dict[constants.IOFields.N_FRAMES],
             n_points=data.shape[1],
+            del_x=data_dict[constants.IOFields.GRAD_DELAY_X],
+            del_y=data_dict[constants.IOFields.GRAD_DELAY_Y],
+            del_z=data_dict[constants.IOFields.GRAD_DELAY_Z],
         )
         # remove projections at the beginning and end of the trajectory
         shape_traj = traj_x.shape
@@ -112,6 +115,9 @@ def prepare_data_and_traj_interleaved(
             ramp_time=data_dict[constants.IOFields.RAMP_TIME],
             n_frames=data_dict[constants.IOFields.N_FRAMES],
             n_points=data_gas.shape[1],
+            del_x=data_dict[constants.IOFields.GRAD_DELAY_X],
+            del_y=data_dict[constants.IOFields.GRAD_DELAY_Y],
+            del_z=data_dict[constants.IOFields.GRAD_DELAY_Z],
         )
         # remove projections at the beginning and end of the trajectory
         shape_traj = traj_x.shape
