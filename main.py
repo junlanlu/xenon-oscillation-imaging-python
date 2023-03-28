@@ -13,6 +13,7 @@ FLAGS = flags.FLAGS
 _CONFIG = config_flags.DEFINE_config_file("config", None, "config file.")
 flags.DEFINE_boolean("force_recon", False, "force reconstruction for the subject")
 flags.DEFINE_boolean("force_readin", False, "force read in .mat for the subject")
+flags.DEFINE_bool("force_segmentation", False, "run segmentation again.")
 
 
 def oscillation_mapping_reconstruction(config: base_config.Config):
@@ -22,7 +23,14 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
         config (config_dict.ConfigDict): config dict
     """
     subject = Subject(config=config)
-    subject.read_twix_files()
+    try:
+        subject.read_twix_files()
+    except:
+        logging.info("Can't find twix files.")
+    try:
+        subject.read_mrd_files()
+    except:
+        raise ValueError("Can't find mrd files.")
     logging.info("Getting RBC:M ratio from static spectroscopy.")
     subject.calculate_rbc_m_ratio()
     logging.info("Reconstructing images")
@@ -55,10 +63,10 @@ def oscillation_mapping_readin(config: base_config.Config):
         config (config_dict.ConfigDict): config dict
     """
     subject = Subject(config=config)
-    subject.read_twix_files()
     subject.read_mat_file()
-    logging.info("Segmenting Proton Mask")
-    subject.segmentation()
+    if FLAGS.force_segmentation:
+        logging.info("Segmenting Proton Mask")
+        subject.segmentation()
     subject.save_subject_to_mat()
     subject.dixon_decomposition()
     subject.dissolved_analysis()

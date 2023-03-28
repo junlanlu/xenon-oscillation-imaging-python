@@ -119,15 +119,19 @@ def prepare_data_and_traj_interleaved(
             del_y=data_dict[constants.IOFields.GRAD_DELAY_Y],
             del_z=data_dict[constants.IOFields.GRAD_DELAY_Z],
         )
-        # remove projections at the beginning and end of the trajectory
         shape_traj = traj_x.shape
-        nskip_start = int(data_dict[constants.IOFields.N_SKIP_START])
-        nskip_end = int(data_dict[constants.IOFields.N_SKIP_END])
-        traj_x = traj_x[nskip_start : shape_traj[0] - (nskip_end)]
-        traj_y = traj_y[nskip_start : shape_traj[0] - (nskip_end)]
-        traj_z = traj_z[nskip_start : shape_traj[0] - (nskip_end)]
     else:
-        raise ValueError("Manual trajectory import not implemented yet.")
+        traj = data_dict[constants.IOFields.TRAJ]
+        shape_traj = traj.shape
+        traj_x = traj[:, :, 0]
+        traj_y = traj[:, :, 1]
+        traj_z = traj[:, :, 2]
+    # remove projections at the beginning and end of the trajectory
+    nskip_start = int(data_dict[constants.IOFields.N_SKIP_START])
+    nskip_end = int(data_dict[constants.IOFields.N_SKIP_END])
+    traj_x = traj_x[nskip_start : shape_traj[0] - (nskip_end)]
+    traj_y = traj_y[nskip_start : shape_traj[0] - (nskip_end)]
+    traj_z = traj_z[nskip_start : shape_traj[0] - (nskip_end)]
     # remove noisy radial projections
     indices_dis = recon_utils.remove_noise_rays(
         data=data_dis,

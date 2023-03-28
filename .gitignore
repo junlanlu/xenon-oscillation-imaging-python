@@ -176,3 +176,7 @@ simulations/data/**
 !simulations/data/.gitkeep
 
 # simulations
+
+# scripts
+scripts/**
+scripts/.gitkeep

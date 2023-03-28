@@ -12,6 +12,44 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("cohort", "all", "cohort folder name in data folder")
 
 
+def sort_pdfs(pdfs: List[str]) -> List[str]:
+    """Sort pdfs by patient id.
+
+    A subject id is a tag unique to the patient. It could end in s1 or s2 to indicate
+    the first scan of the session or the second scan of the session. The subject id
+    may also contain letters "A-Z" to indicate which session the scan belongs to.
+    The algorithm will sort the pdfs by subject id, then by scan, then by session.
+
+    Examples:
+        "000-001A_s1" will be sorted before "000-001A_s2".
+        "000-001A" will be sorted before "000-001B_s1".
+        "000-001" will be sorted before "000-002_s1".
+    Args:
+        pdfs: list of pdf paths
+    Returns:
+        sorted pdfs
+    """
+    # Get subject ids
+    subject_ids = [os.path.basename(pdf).split("_")[0] for pdf in pdfs]
+    # Get scan numbers
+    scan_numbers = [os.path.basename(pdf).split("_")[1] for pdf in pdfs]
+    # Get session numbers
+    session_numbers = [os.path.basename(pdf).split("_")[2] for pdf in pdfs]
+    # Sort pdfs
+    return [
+        pdf
+        for _, pdf in sorted(
+            zip(
+                zip(
+                    zip(subject_ids, scan_numbers, session_numbers),
+                    [os.path.basename(pdf) for pdf in pdfs],
+                ),
+                pdfs,
+            )
+        )
+    ]
+
+
 def get_pdfs() -> List[str]:
     """Get all pdfs in the data/ folder."""
     if FLAGS.cohort == "healthy":
@@ -30,12 +68,15 @@ def get_pdfs() -> List[str]:
         pdfs = glob.glob(
             os.path.join("data", "tyvaso", "**/report_clinical**.pdf"), recursive=True
         )
+    elif FLAGS.cohort == "jupiter":
+        pdfs = glob.glob(
+            os.path.join("data", "jupiter", "**/report_clinical**.pdf"), recursive=True
+        )
     elif FLAGS.cohort == "all":
         pdfs = glob.glob("data/**/report_clinical.pdf", recursive=True)
     else:
         raise ValueError("Invalid cohort name")
-    pdfs.sort()
-    return pdfs
+    return sort_pdfs(pdfs)
 
 
 def main(argv):

@@ -102,7 +102,7 @@ class Params(object):
         # )
         # reprocessed with the new pipeline
         self.threshold_oscillation = np.array(
-            [-2.02, 0.53, 3.66, 7.63, 12.99, 12.99, 12.07, 35.56]
+            [-2.02, 0.53, 3.66, 7.63, 12.99, 21.07, 35.56]
         )
         self.threshold_rbc = np.array([0.066, 0.250, 0.453, 0.675, 0.956]) / 2.0
 

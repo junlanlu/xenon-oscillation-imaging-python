@@ -2,14 +2,15 @@
 
 import pdb
 import sys
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 sys.path.append("..")
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy.stats as stats
 
-from utils import constants
+from utils import constants, io_utils
 
 
 def map_grey_to_rgb(image: np.ndarray, cmap: Dict[int, np.ndarray]) -> np.ndarray:
@@ -89,7 +90,7 @@ def get_plot_indices(image: np.ndarray, n_slices: int = 16) -> Tuple[int, int]:
 def make_montage(image: np.ndarray, n_slices: int = 16) -> np.ndarray:
     """Make montage of the image.
 
-    Makes 2xn_slices//2 montage of the image.
+    Makes montage of the image.
     Assumes the image is of shape (x, y, z, 3).
 
     Args:
@@ -101,19 +102,19 @@ def make_montage(image: np.ndarray, n_slices: int = 16) -> np.ndarray:
     # get the shape of the image
     x, y, z, _ = image.shape
     # get the number of rows and columns
-    n_rows = 2
-    n_cols = n_slices // n_rows
+    n_rows = 1 if n_slices < 8 else 2
+    n_cols = np.ceil(n_slices / n_rows).astype(int)
     # get the shape of the slices
     slice_shape = (x, y)
     # make the montage array
     montage = np.zeros((n_rows * slice_shape[0], n_cols * slice_shape[1], 3))
     # iterate over the slices
-    for i in range(n_slices):
+    for slice in range(n_slices):
         # get the row and column
-        row = i // n_cols
-        col = i % n_cols
+        row = slice // n_cols
+        col = slice % n_cols
         # get the slice
-        slice = image[:, :, i, :]
+        slice = image[:, :, slice, :]
         # add to the montage
         montage[
             row * slice_shape[0] : (row + 1) * slice_shape[0],
@@ -156,12 +157,16 @@ def plot_montage_grey(
 
 
 def plot_montage_color(
-    image: np.ndarray, path: str, index_start: int, index_skip: int = 1
+    image: np.ndarray,
+    path: str,
+    index_start: int,
+    index_skip: int = 1,
+    n_slices: int = 16,
 ):
     """Plot a montage of the image in RGB.
 
-    Will make a montage of 2x8 of the image in RGB and save it to the path.
-    Assumes the image is of shape (x, y, z) where there are at least 16 slices.
+    Will make a montage of default (2x8) of the image in RGB and save it to the path.
+    Assumes the image is of shape (x, y, z) where there are at least n_slices.
     Otherwise, will plot all slices.
 
     Args:
@@ -169,11 +174,12 @@ def plot_montage_color(
         path (str): path to save the image.
         index_start (int): index to start plotting from.
         index_skip (int, optional): indices to skip. Defaults to 1.
+        n_slices (int, optional): number of slices to plot. Defaults to 16.
     """
     # plot the montage
-    index_end = index_start + index_skip * 16
+    index_end = index_start + index_skip * n_slices
     montage = make_montage(
-        image[:, :, index_start:index_end:index_skip, :], n_slices=16
+        image[:, :, index_start:index_end:index_skip, :], n_slices=n_slices
     )
     plt.figure()
     plt.imshow(montage, cmap="gray")
@@ -199,17 +205,22 @@ def plot_histogram_rbc_osc(data: np.ndarray, path: str):
     )
     ax.set_ylabel("Fraction of Total Pixels", fontsize=35)
     # define and plot healthy reference line
-    # refer_fit = []
-    # normal = refer_fit[0] * np.exp(-(((bins - refer_fit[1]) / refer_fit[2]) ** 2))
-    # ax.plot(bins, normal, "--", color="k", linewidth=4)
-    # ax.set_ylabel("Fraction of Total Pixels", fontsize=35)
+    data_ref = io_utils.import_np(path="data/reference_dist.npy")
+    n, bins, _ = ax.hist(
+        data_ref,
+        bins=bins,
+        color=(1, 1, 1),
+        alpha=0.0,
+        weights=np.ones_like(data_ref) / float(len(data_ref)),
+    )
+    ax.plot(0.5 * (bins[1:] + bins[:-1]), n, "--", color="k", linewidth=4)
     # set plot parameters
     plt.xlim((-15, 35))
-    plt.ylim((0, 0.07))
+    plt.ylim((0, 0.1))
     plt.rc("axes", linewidth=4)
     # define ticks
     xticks = [-10, 0, 10, 20, 30, 50]
-    yticks = [0.02, 0.04]
+    yticks = [0.02, 0.04, 0.06, 0.08]
     plt.xticks(xticks, ["{:.0f}".format(x) for x in xticks], fontsize=40)
     plt.yticks(yticks, ["{:.2f}".format(x) for x in yticks], fontsize=40)
     fig.tight_layout()
@@ -281,3 +292,84 @@ def plot_data_rbc_k0(
     fig.tight_layout()
     plt.savefig(path)
     plt.close()
+
+
+def plot_histogram_with_thresholds(
+    data: np.ndarray, thresholds: List[float], path: str
+):
+    """Generate the histogram for the healthy reference distribution.
+
+    Plot histogram of the data with the thresholds each having a different color by
+    setting the face color in matplotlib. All values below the first threshold are
+    red, all values between the first and second threshold are orange, all values above
+    last threshold are purple.
+
+    Args:
+        data (np.ndarray): data to plot
+        thresholds (List[float]): list of thresholds to plot of length 7.
+        path (str): path to save the figure.
+    """
+    _, ax = plt.subplots(figsize=(10, 5), dpi=300)
+    ax.hist(data, bins=500, density=True)
+
+    # Plot the thresholds
+    for threshold in thresholds:
+        ax.axvline(threshold, color="k", linestyle="--", linewidth=1)
+    # Set the face color for the thresholds
+    i = 0
+    while ax.patches[i].get_x() < thresholds[0]:
+        ax.patches[i].set_facecolor((1, 0, 0))  # red
+        i += 1
+
+    while (
+        i < len(ax.patches)
+        and ax.patches[i].get_x() >= thresholds[0]
+        and ax.patches[i].get_x() < thresholds[1]
+    ):
+        ax.patches[i].set_facecolor((1, 0.7143, 0))
+        i += 1
+    while (
+        i < len(ax.patches)
+        and ax.patches[i].get_x() >= thresholds[1]
+        and ax.patches[i].get_x() < thresholds[2]
+    ):
+        ax.patches[i].set_facecolor((0.4, 0.7, 0.4))
+        i += 1
+    while (
+        i < len(ax.patches)
+        and ax.patches[i].get_x() >= thresholds[2]
+        and ax.patches[i].get_x() < thresholds[3]
+    ):
+        ax.patches[i].set_facecolor((0, 1, 0))
+        i += 1
+    while (
+        i < len(ax.patches)
+        and ax.patches[i].get_x() >= thresholds[3]
+        and ax.patches[i].get_x() < thresholds[4]
+    ):
+        ax.patches[i].set_facecolor((184.0 / 255.0, 226.0 / 255.0, 145.0 / 255.0))
+        i += 1
+    while (
+        i < len(ax.patches)
+        and ax.patches[i].get_x() >= thresholds[4]
+        and ax.patches[i].get_x() < thresholds[5]
+    ):
+        ax.patches[i].set_facecolor((243.0 / 255.0, 205.0 / 255.0, 213.0 / 255.0))
+        i += 1
+    while (
+        i < len(ax.patches)
+        and ax.patches[i].get_x() >= thresholds[5]
+        and ax.patches[i].get_x() < thresholds[6]
+    ):
+        ax.patches[i].set_facecolor((225.0 / 255.0, 129.0 / 255.0, 162.0 / 255.0))
+        i += 1
+    while i < len(ax.patches) and ax.patches[i].get_x() >= thresholds[6]:
+        ax.patches[i].set_facecolor((197.0 / 255.0, 27.0 / 255.0, 125.0 / 255.0))
+        i += 1
+    # increase the size of the tick labels
+    ax.set_xlabel("RBC Oscillation Amplitude (%)", fontsize=20)
+    ax.set_ylabel("Density (a.u.)", fontsize=20)
+    ax.set_yticks([])
+    ax.tick_params(axis="x", which="major", labelsize=20)
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.savefig(path)

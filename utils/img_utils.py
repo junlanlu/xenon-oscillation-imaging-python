@@ -79,6 +79,10 @@ def flip_and_rotate_image(
         image = np.rot90(image, 1, axes=(0, 1))
         image = np.flip(np.flip(image, axis=1), axis=2)
         return image
+    elif orientation == constants.Orientation.CORONAL_CCHMC:
+        image = np.rot90(np.rot90(image, 3, axes=(1, 2)), 1, axes=(0, 2))
+        image = np.flip(np.flip(image, axis=1), axis=2)
+        return image
     elif orientation == constants.Orientation.TRANSVERSE:
         return rotate_axial_to_coronal(flip_image_complex(image))
     elif orientation == constants.Orientation.AXIAL:
@@ -150,7 +154,7 @@ def smooth_image(image: np.ndarray, kernel: int = 11) -> np.ndarray:
 
     Args:
         image (np.ndarray): 3D image to smooth.
-        kernel (int, optional): size of the kernel. Defaults to 5.
+        kernel (int, optional): size of the kernel. Defaults to 11.
     """
     kernel = np.ones((kernel, kernel, kernel)) / (kernel**3)  # type: ignore
     return ndimage.convolve(image, kernel, mode="constant")

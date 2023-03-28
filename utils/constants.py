@@ -57,6 +57,9 @@ class IOFields(object):
     TE90 = "te90"
     TR = "tr"
     TR_DIS = "tr_dis"
+    TRAJ = "traj"
+    TRAJ_DIS = "traj_dis"
+    TRAJ_GAS = "traj_gas"
     VEN_COR_MONTAGE = "bias_cor_ven_montage"
     VEN_CV = "ven_cv"
     VEN_DEFECT = "ven_defect"
@@ -159,6 +162,7 @@ class Orientation(object):
     CORONAL = "coronal"
     AXIAL = "axial"
     TRANSVERSE = "transverse"
+    CORONAL_CCHMC = "coronal_cchmc"
 
 
 class DCFSpace(object):

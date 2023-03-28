@@ -117,7 +117,7 @@ def get_center_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
 def get_excitation_freq(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
     """Get the excitation frequency in MHz.
 
-    See: https://mriquestions.com/center-frequency.html for definition of center freq.
+    See: https://mriquestions.com/center-frequency.html.
     Return 218.0 if not found.
 
     Args:
@@ -339,7 +339,7 @@ def get_protocol_name(twix_obj: mapvbvd._attrdict.AttrDict) -> str:
         return "unknown"
 
 
-def get_dyn_dissolved_fids(
+def get_dyn_fids(
     twix_obj: mapvbvd._attrdict.AttrDict, n_skip_end: int = 20
 ) -> np.ndarray:
     """Get the dissolved phase FIDS used for dyn. spectroscopy from twix object.
@@ -424,9 +424,7 @@ def get_gx_data(twix_obj: mapvbvd._attrdict.AttrDict) -> Dict[str, Any]:
             n_skip_end = 0
             grad_delay_x, grad_delay_y, grad_delay_z = -5, -5, -5
         elif raw_fids.shape[0] == 2002:
-            if scan_datetime > datetime.datetime(
-                2018, 5, 1
-            ) or scan_datetime <= datetime.datetime(2017, 12, 4):
+            if scan_datetime > datetime.datetime(2017, 9, 21):
                 logging.info("Reading in 'normal' dixon data on Siemens Trio.")
                 data_gas = raw_fids[:-2][2::2, :]
                 data_dis = raw_fids[:-2][3::2, :]

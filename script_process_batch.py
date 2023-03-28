@@ -12,6 +12,7 @@ from main import oscillation_mapping_readin, oscillation_mapping_reconstruction
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string("cohort", "healthy", "cohort folder name in config folder")
+
 CONFIG_PATH = "config/"
 
 
@@ -29,11 +30,27 @@ def main(argv):
         subjects = glob.glob(os.path.join(CONFIG_PATH, "ild", "*py"))
     elif FLAGS.cohort == "tyvaso":
         subjects = glob.glob(os.path.join(CONFIG_PATH, "tyvaso", "*py"))
+    elif FLAGS.cohort == "jupiter":
+        subjects = glob.glob(os.path.join(CONFIG_PATH, "jupiter", "*py"))
     elif FLAGS.cohort == "all":
         subjects = glob.glob(os.path.join(CONFIG_PATH, "healthy", "*py"))
         subjects += glob.glob(os.path.join(CONFIG_PATH, "cteph", "*py"))
         subjects += glob.glob(os.path.join(CONFIG_PATH, "ild", "*py"))
         subjects += glob.glob(os.path.join(CONFIG_PATH, "tyvaso", "*py"))
+    elif "-" in FLAGS.cohort:
+        cohorts = FLAGS.cohort.split("-")
+        subjects = []
+        for cohort in cohorts:
+            if cohort == "healthy":
+                subjects += glob.glob(os.path.join(CONFIG_PATH, "healthy", "*py"))
+            elif cohort == "cteph":
+                subjects += glob.glob(os.path.join(CONFIG_PATH, "cteph", "*py"))
+            elif cohort == "ild":
+                subjects += glob.glob(os.path.join(CONFIG_PATH, "ild", "*py"))
+            elif cohort == "tyvaso":
+                subjects += glob.glob(os.path.join(CONFIG_PATH, "tyvaso", "*py"))
+            else:
+                raise ValueError("Invalid cohort name")
     else:
         raise ValueError("Invalid cohort name")
 

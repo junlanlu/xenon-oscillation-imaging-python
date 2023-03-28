@@ -10,6 +10,7 @@ import glob
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+import ismrmrd
 import mapvbvd
 import matplotlib
 import nibabel as nib
@@ -17,7 +18,7 @@ import numpy as np
 import pandas as pd
 import scipy.io as sio
 
-from utils import constants, twix_utils
+from utils import constants, mrd_utils, twix_utils
 
 
 def import_np(path: str) -> np.ndarray:
@@ -51,6 +52,29 @@ def import_mat(path: str) -> Dict[str, Any]:
         dictionary loaded from matlab file
     """
     return sio.loadmat(path)
+
+
+def import_matstruct_to_dict(struct: np.ndarray) -> Dict[str, Any]:
+    """Import matlab  as dictionary.
+
+    Args:
+        path: str file path of matlab file
+    Returns:
+        dictionary loaded from matlab file
+    """
+    out_dict = {}
+    for field in struct.dtype.names:
+        value = struct[field].flatten()[0]
+        if isinstance(value[0], str):
+            # strings
+            out_dict[field] = str(value[0])
+        elif len(value) == 1:
+            # numbers
+            out_dict[field] = value[0][0]
+        else:
+            # arrays
+            out_dict[field] = np.asarray(value)
+    return out_dict
 
 
 def get_dyn_twix_files(path: str) -> str:
@@ -90,7 +114,7 @@ def get_dis_twix_files(path: str) -> str:
 
 
 def get_ute_twix_files(path: str) -> str:
-    """Get list of gas exchange twix files.
+    """Get list of UTE twix files.
 
     Args:
         path: str directory path of twix files
@@ -107,6 +131,34 @@ def get_ute_twix_files(path: str) -> str:
         raise ValueError("Can't find twix file in path.")
 
 
+def get_dyn_mrd_files(path: str) -> str:
+    """Get list of dynamic spectroscopy MRD files.
+
+    Args:
+        path: str directory path of MRD files
+    Returns:
+        str file path of MRD file
+    """
+    try:
+        return (glob.glob(os.path.join(path, "**Calibration***.h5")))[0]
+    except:
+        raise ValueError("Can't find MRD file in path.")
+
+
+def get_dis_mrd_files(path: str) -> str:
+    """Get list of gas exchange MRD files.
+
+    Args:
+        path: str directory path of MRD files
+    Returns:
+        str file path of MRD file
+    """
+    try:
+        return (glob.glob(os.path.join(path, "**Gas***.h5")))[0]
+    except:
+        raise ValueError("Can't find MRD file in path.")
+
+
 def get_mat_file(path: str) -> str:
     """Get list of mat file of reconstructed images.
 
@@ -118,7 +170,7 @@ def get_mat_file(path: str) -> str:
     try:
         return (glob.glob(os.path.join(path, "**.mat")))[0]
     except:
-        raise ValueError("Can't find twix file in path.")
+        raise ValueError("Can't find mat file in path.")
 
 
 def read_dyn_twix(path: str) -> Dict[str, Any]:
@@ -145,7 +197,7 @@ def read_dyn_twix(path: str) -> Dict[str, Any]:
 
     # Get scan information
     dwell_time = twix_utils.get_dwell_time(twix_obj=twix_obj)
-    fids_dis = twix_utils.get_dyn_dissolved_fids(twix_obj)
+    fids_dis = twix_utils.get_dyn_fids(twix_obj)
     freq_center = twix_utils.get_center_freq(twix_obj=twix_obj)
     freq_excitation = twix_utils.get_excitation_freq(twix_obj=twix_obj)
     scan_date = twix_utils.get_scan_date(twix_obj=twix_obj)
@@ -259,6 +311,103 @@ def read_ute_twix(path: str) -> Dict[str, Any]:
         constants.IOFields.GRAD_DELAY_Z: data_dict[constants.IOFields.GRAD_DELAY_Z],
         constants.IOFields.N_FRAMES: data_dict[constants.IOFields.N_FRAMES],
         constants.IOFields.ORIENTATION: twix_utils.get_orientation(twix_obj),
+    }
+
+
+def read_dyn_mrd(path: str) -> Dict[str, Any]:
+    """Read dynamic spectroscopy MRD file.
+
+    Args:
+        path: str file path of MRD file
+    Returns: dictionary containing data and metadata extracted from the MRD file.
+    This includes:
+        1. scan date in MM-DD-YYY format.
+        2. dwell time in seconds.
+        3. TR in seconds.
+        4. Center frequency in MHz.
+        5. excitation frequency in ppm.
+        6. dissolved phase FIDs in format (n_points, n_projections).
+    """
+    try:
+        dataset = ismrmrd.Dataset(path, "dataset", create_if_needed=False)
+        header = ismrmrd.xsd.CreateFromDocument(dataset.read_xml_header())
+    except:
+        raise ValueError("Invalid mrd file.")
+    # Get scan information
+    dwell_time = mrd_utils.get_dwell_time(header=header)
+    fids_dis = mrd_utils.get_dyn_fids(dataset=dataset)
+    freq_center = mrd_utils.get_center_freq(header=header)
+    freq_excitation = mrd_utils.get_excitation_freq(header=header)
+    scan_date = mrd_utils.get_scan_date(header=header)
+    tr = mrd_utils.get_TR(header=header)
+
+    return {
+        constants.IOFields.DWELL_TIME: dwell_time,
+        constants.IOFields.FIDS_DIS: fids_dis,
+        constants.IOFields.FREQ_CENTER: freq_center,
+        constants.IOFields.FREQ_EXCITATION: freq_excitation,
+        constants.IOFields.SCAN_DATE: scan_date,
+        constants.IOFields.TR: tr,
+    }
+
+
+def read_dis_mrd(path: str) -> Dict[str, Any]:
+    """Read 1-point dixon disssolved phase imaging mrd file.
+
+    Args:
+        path: str file path of mrd file
+    Returns: dictionary containing data and metadata extracted from the mrd file.
+    This includes:
+        - dwell time in seconds.
+        - flip angle applied to dissolved phase in degrees.
+        - flip angle applied to gas phase in degrees.
+        - dissolved phase FIDs in format (n_projections, n_points).
+        - gas phase FIDs in format (n_projections, n_points).
+        - field of view in cm.
+        - center frequency in MHz.
+        - excitation frequency in ppm.
+        - gradient delay (x, y, z) in microseconds.
+        - number of frames (projections) used to calculate trajectory.
+        - number of projections to skip at the beginning of the scan.
+        - number of projections to skip at the end of the scan.
+        - orientation of the scan.
+        - protocol name
+        - ramp time in microseconds.
+        - scan date in YYYY-MM-DD format.
+        - software version
+        - TE90 in seconds.
+        - TR in seconds.
+    """
+    try:
+        dataset = ismrmrd.Dataset(path, "dataset", create_if_needed=False)
+        header = ismrmrd.xsd.CreateFromDocument(dataset.read_xml_header())
+    except:
+        raise ValueError("Invalid mrd file.")
+
+    data_dict = mrd_utils.get_gx_data(dataset, header)
+    return {
+        constants.IOFields.DWELL_TIME: mrd_utils.get_dwell_time(header),
+        constants.IOFields.FA_DIS: mrd_utils.get_flipangle_dissolved(header),
+        constants.IOFields.FA_GAS: mrd_utils.get_flipangle_gas(header),
+        constants.IOFields.FIDS_DIS: data_dict[constants.IOFields.FIDS_DIS],
+        constants.IOFields.FIDS_GAS: data_dict[constants.IOFields.FIDS_GAS],
+        constants.IOFields.FOV: mrd_utils.get_FOV(header),
+        constants.IOFields.FREQ_CENTER: mrd_utils.get_center_freq(header),
+        constants.IOFields.FREQ_EXCITATION: mrd_utils.get_excitation_freq(header),
+        constants.IOFields.GRAD_DELAY_X: data_dict[constants.IOFields.GRAD_DELAY_X],
+        constants.IOFields.GRAD_DELAY_Y: data_dict[constants.IOFields.GRAD_DELAY_Y],
+        constants.IOFields.GRAD_DELAY_Z: data_dict[constants.IOFields.GRAD_DELAY_Z],
+        constants.IOFields.N_FRAMES: data_dict[constants.IOFields.N_FRAMES],
+        constants.IOFields.N_SKIP_END: data_dict[constants.IOFields.N_SKIP_END],
+        constants.IOFields.N_SKIP_START: data_dict[constants.IOFields.N_SKIP_START],
+        constants.IOFields.ORIENTATION: mrd_utils.get_orientation(header),
+        constants.IOFields.PROTOCOL_NAME: mrd_utils.get_protocol_name(header),
+        constants.IOFields.RAMP_TIME: mrd_utils.get_ramp_time(header),
+        constants.IOFields.REMOVEOS: False,
+        constants.IOFields.SCAN_DATE: mrd_utils.get_scan_date(header),
+        constants.IOFields.SOFTWARE_VERSION: "NA",
+        constants.IOFields.TE90: mrd_utils.get_TE90(header),
+        constants.IOFields.TR: mrd_utils.get_TR_dissolved(header),
     }
 
 

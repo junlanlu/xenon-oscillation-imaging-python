@@ -112,11 +112,10 @@ class Subject(object):
         self.traj_gas = np.array([])
 
     def read_twix_files(self):
-        """Read in files.
+        """Read in twix files to dictionary.
 
         Read in the dynamic spectroscopy (if it exists) and the dissolved-phase image
-        data. Currently only supports twix files but will be extended to support
-        other files.
+        data.
         """
         self.dict_dyn = io_utils.read_dyn_twix(
             io_utils.get_dyn_twix_files(str(self.config.data_dir))
@@ -129,6 +128,19 @@ class Subject(object):
                 io_utils.get_ute_twix_files(str(self.config.data_dir))
             )
 
+    def read_mrd_files(self):
+        """Read in mrd files to dictionary.
+
+        Read in the dynamic spectroscopy (if it exists) and the dissolved-phase image
+        data.
+        """
+        self.dict_dyn = io_utils.read_dyn_mrd(
+            io_utils.get_dyn_mrd_files(str(self.config.data_dir))
+        )
+        self.dict_dis = io_utils.read_dis_mrd(
+            io_utils.get_dis_mrd_files(str(self.config.data_dir))
+        )
+
     def read_mat_file(self):
         """Read in mat file of reconstructed images.
 
@@ -136,18 +148,25 @@ class Subject(object):
         Thus, if the variable names are changed in the mat file, they must be changed.
         """
         mdict = io_utils.import_mat(io_utils.get_mat_file(str(self.config.data_dir)))
+        self.dict_dis = io_utils.import_matstruct_to_dict(mdict["dict_dis"])
+        self.dict_dyn = io_utils.import_matstruct_to_dict(mdict["dict_dyn"])
+        if "dict_ute" in mdict.keys():
+            logging.info("UTE proton data found.")
+            self.dict_ute = io_utils.import_matstruct_to_dict(mdict["dict_ute"])
         self.data_dissolved = mdict["data_dissolved"]
         self.data_dissolved_norm = mdict["data_dissolved_norm"]
         self.data_dissolved_norm = mdict["data_dissolved_norm"]
+        self.data_gas = mdict["data_gas"]
         self.data_rbc_k0 = mdict["data_rbc_k0"].flatten()
         self.high_indices = mdict["high_indices"].flatten()
-        self.mask = mdict["mask"].astype(bool)
         self.image_dissolved = mdict["image_dissolved"]
         self.image_dissolved_high = mdict["image_dissolved_high"]
         self.image_dissolved_low = mdict["image_dissolved_low"]
         self.image_dissolved_norm = mdict["image_dissolved_norm"]
         self.image_gas = mdict["image_gas"]
+        self.key_radius = int(mdict["key_radius"])
         self.low_indices = mdict["low_indices"].flatten()
+        self.mask = mdict["mask"].astype(bool)
         self.rbc_m_ratio = float(mdict["rbc_m_ratio"])
         self.rbc_m_ratio_high = float(mdict["rbc_m_ratio_high"])
         self.rbc_m_ratio_low = float(mdict["rbc_m_ratio_low"])
@@ -227,7 +246,7 @@ class Subject(object):
             kernel_extent=9 * float(self.config.recon.kernel_sharpness_hr),
         )
         self.image_ute = img_utils.flip_and_rotate_image(
-            self.image_ute, orientation=constants.Orientation.CORONAL
+            self.image_ute, orientation=self.dict_dis[constants.IOFields.ORIENTATION]
         )
 
     def reconstruction_gas(self):
@@ -239,7 +258,7 @@ class Subject(object):
             kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
         )
         self.image_gas = img_utils.flip_and_rotate_image(
-            self.image_gas, orientation=constants.Orientation.CORONAL
+            self.image_gas, orientation=self.dict_dis[constants.IOFields.ORIENTATION]
         )
 
     def reconstruction_dissolved(self):
@@ -261,10 +280,12 @@ class Subject(object):
             kernel_extent=9 * float(self.config.recon.kernel_sharpness_lr),
         )
         self.image_dissolved_norm = img_utils.flip_and_rotate_image(
-            self.image_dissolved_norm, orientation=constants.Orientation.CORONAL
+            self.image_dissolved_norm,
+            orientation=self.dict_dis[constants.IOFields.ORIENTATION],
         )
         self.image_dissolved = img_utils.flip_and_rotate_image(
-            self.image_dissolved, orientation=constants.Orientation.CORONAL
+            self.image_dissolved,
+            orientation=self.dict_dis[constants.IOFields.ORIENTATION],
         )
 
     def reconstruction_rbc_oscillation(self):
@@ -312,10 +333,12 @@ class Subject(object):
         )
         # flip and rotate images
         self.image_dissolved_high = img_utils.flip_and_rotate_image(
-            self.image_dissolved_high, orientation=constants.Orientation.CORONAL
+            self.image_dissolved_high,
+            orientation=self.dict_dis[constants.IOFields.ORIENTATION],
         )
         self.image_dissolved_low = img_utils.flip_and_rotate_image(
-            self.image_dissolved_low, orientation=constants.Orientation.CORONAL
+            self.image_dissolved_low,
+            orientation=self.dict_dis[constants.IOFields.ORIENTATION],
         )
 
     def segmentation(self):

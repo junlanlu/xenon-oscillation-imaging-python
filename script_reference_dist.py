@@ -74,13 +74,13 @@ def get_thresholds():
 
     Apply box-cox transformation to the healthy reference distribution.
     """
-    hist_osc = io_utils.import_np(path="data/reference_dist.npy")
+    data_osc = io_utils.import_np(path="data/reference_dist.npy")
     scale_factor = 100
-    data_trans, lambda_ = signal_utils.boxcox(data=hist_osc + scale_factor)
+    data_trans, lambda_ = signal_utils.boxcox(data=data_osc + scale_factor)
 
     mean_data_trans = np.mean(data_trans)
     std_data_trans = np.std(data_trans)
-    plot.plot_histogram_rbc_osc(hist_osc, "tmp/healty_hist.png")
+    plot.plot_histogram_rbc_osc(data_osc, "tmp/healty_hist.png")
     logging.info("Lambda: %s", lambda_)
     for z in range(-2, 5):
         threshold = signal_utils.inverse_boxcox(
@@ -88,7 +88,7 @@ def get_thresholds():
         )
         logging.info("Box-cox threshold: %s", threshold)
     for z in range(-2, 5):
-        threshold = np.mean(hist_osc) + z * np.std(hist_osc)
+        threshold = np.mean(data_osc) + z * np.std(data_osc)
         logging.info("Gaussian threshold: %s", threshold)
 
 
