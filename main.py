@@ -26,11 +26,7 @@ def oscillation_mapping_reconstruction(config: base_config.Config):
     try:
         subject.read_twix_files()
     except:
-        logging.info("Can't find twix files.")
-    try:
         subject.read_mrd_files()
-    except:
-        raise ValueError("Can't find mrd files.")
     logging.info("Getting RBC:M ratio from static spectroscopy.")
     subject.calculate_rbc_m_ratio()
     logging.info("Reconstructing images")
