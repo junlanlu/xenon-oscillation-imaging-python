@@ -197,6 +197,7 @@ class Subject(object):
 
         Also, calculates the scaling factor for the trajectory.
         """
+        generate_traj = not constants.IOFields.TRAJ in self.dict_dis.keys()
         if self.config.remove_contamination:
             self.dict_dis = pp.remove_contamination(self.dict_dyn, self.dict_dis)
         (
@@ -204,7 +205,11 @@ class Subject(object):
             self.traj_dissolved,
             self.data_gas,
             self.traj_gas,
-        ) = pp.prepare_data_and_traj_interleaved(self.dict_dis)
+        ) = pp.prepare_data_and_traj_interleaved(
+            self.dict_dis,
+            generate_traj=generate_traj,
+            remove_noise=self.config.remove_noisy_projections,
+        )
         self.data_dissolved, self.traj_dissolved = pp.truncate_data_and_traj(
             self.data_dissolved,
             self.traj_dissolved,

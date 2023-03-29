@@ -140,7 +140,10 @@ def get_dyn_mrd_files(path: str) -> str:
         str file path of MRD file
     """
     try:
-        return (glob.glob(os.path.join(path, "**Calibration***.h5")))[0]
+        return (
+            glob.glob(os.path.join(path, "**Calibration***.h5"))
+            + glob.glob(os.path.join(path, "**calibration***.h5"))
+        )[0]
     except:
         raise ValueError("Can't find MRD file in path.")
 
@@ -154,7 +157,10 @@ def get_dis_mrd_files(path: str) -> str:
         str file path of MRD file
     """
     try:
-        return (glob.glob(os.path.join(path, "**Gas***.h5")))[0]
+        return (
+            glob.glob(os.path.join(path, "**Gas***.h5"))
+            + glob.glob(os.path.join(path, "**dixon***.h5"))
+        )[0]
     except:
         raise ValueError("Can't find MRD file in path.")
 
@@ -408,6 +414,7 @@ def read_dis_mrd(path: str) -> Dict[str, Any]:
         constants.IOFields.SOFTWARE_VERSION: "NA",
         constants.IOFields.TE90: mrd_utils.get_TE90(header),
         constants.IOFields.TR: mrd_utils.get_TR_dissolved(header),
+        constants.IOFields.TRAJ: data_dict[constants.IOFields.TRAJ],
     }
 
 

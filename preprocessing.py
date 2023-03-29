@@ -88,7 +88,7 @@ def prepare_data_and_traj(
 
 
 def prepare_data_and_traj_interleaved(
-    data_dict: Dict[str, Any], generate_traj: bool = True
+    data_dict: Dict[str, Any], generate_traj: bool = True, remove_noise: bool = True
 ) -> Tuple[np.ndarray, ...]:
     """Prepare data and trajectory for interleaved data reconstruction.
 
@@ -99,6 +99,7 @@ def prepare_data_and_traj_interleaved(
         data_dict: dictionary containing data and metadata extracted from the twix file.
         Optionally also contains trajectories.
         generate_traj: bool flag to generate trajectory from metadata in twix file.
+        remove_noise: bool flag to remove noisy radial projections.
 
     Returns:
         A tuple of data and trajectory arrays in the following order:
@@ -133,31 +134,34 @@ def prepare_data_and_traj_interleaved(
     traj_y = traj_y[nskip_start : shape_traj[0] - (nskip_end)]
     traj_z = traj_z[nskip_start : shape_traj[0] - (nskip_end)]
     # remove noisy radial projections
-    indices_dis = recon_utils.remove_noise_rays(
-        data=data_dis,
-    )
-    indices_gas = recon_utils.remove_noise_rays(
-        data=data_gas,
-    )
-    # ensure that same projections are removed for dissolved and gas
-    indices = np.logical_and(indices_dis, indices_gas)
-    data_gas, traj_gas_x, traj_gas_y, traj_gas_z = recon_utils.apply_indices_mask(
-        data=data_gas,
-        traj_x=traj_x,
-        traj_y=traj_y,
-        traj_z=traj_z,
-        indices=indices,
-    )
-    data_dis, traj_dis_x, traj_dis_y, traj_dis_z = recon_utils.apply_indices_mask(
-        data=data_dis,
-        traj_x=traj_x,
-        traj_y=traj_y,
-        traj_z=traj_z,
-        indices=indices,
-    )
-    traj_dis = np.stack([traj_dis_x, traj_dis_y, traj_dis_z], axis=-1)
-    traj_gas = np.stack([traj_gas_x, traj_gas_y, traj_gas_z], axis=-1)
-
+    if remove_noise:
+        indices_dis = recon_utils.remove_noise_rays(
+            data=data_dis,
+        )
+        indices_gas = recon_utils.remove_noise_rays(
+            data=data_gas,
+        )
+        # ensure that same projections are removed for dissolved and gas
+        indices = np.logical_and(indices_dis, indices_gas)
+        data_gas, traj_gas_x, traj_gas_y, traj_gas_z = recon_utils.apply_indices_mask(
+            data=data_gas,
+            traj_x=traj_x,
+            traj_y=traj_y,
+            traj_z=traj_z,
+            indices=indices,
+        )
+        data_dis, traj_dis_x, traj_dis_y, traj_dis_z = recon_utils.apply_indices_mask(
+            data=data_dis,
+            traj_x=traj_x,
+            traj_y=traj_y,
+            traj_z=traj_z,
+            indices=indices,
+        )
+        traj_dis = np.stack([traj_dis_x, traj_dis_y, traj_dis_z], axis=-1)
+        traj_gas = np.stack([traj_gas_x, traj_gas_y, traj_gas_z], axis=-1)
+    else:
+        traj_dis = np.stack([traj_x, traj_y, traj_z], axis=-1)
+        traj_gas = np.copy(traj_dis)
     return data_dis, traj_dis, data_gas, traj_gas
 
 

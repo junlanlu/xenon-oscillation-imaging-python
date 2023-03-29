@@ -17,6 +17,7 @@ class Config(config_dict.ConfigDict):
         data_dir: str, path to the data directory
         manual_seg_filepath: str, path to the manual segmentation nifti file
         remove_contamination: bool, whether to remove gas contamination
+        remove_noisy_projections: bool, whether to remove noisy projections
         processes: Process, the evaluation processes
         params: Params, the important parameters
         platform: Platform, the scanner vendor platform
@@ -42,6 +43,7 @@ class Config(config_dict.ConfigDict):
         self.subject_id = "test"
         self.rbc_m_ratio = 0.0
         self.remove_contamination = False
+        self.remove_noisy_projections = True
 
 
 class Process(object):

@@ -276,6 +276,7 @@ def get_gx_data(
         7. gradient delay y in microseconds.
         8. gradient delay z in microseconds.
     """
+    institution = get_institution_name(header)
     # get the raw FIDs
     raw_fids = []
     n_projections = dataset.number_of_acquisitions()
@@ -286,6 +287,9 @@ def get_gx_data(
     raw_traj = np.empty((raw_fids.shape[0], raw_fids.shape[1], 3))
     for i in range(0, int(n_projections)):  # type: ignore
         raw_traj[i, :, :] = dataset.read_acquisition(i).traj
+
+    if institution == "CCHMC" and raw_fids.shape[1] == 128:
+        raw_traj = 0.5 * raw_traj
     return {
         constants.IOFields.FIDS_GAS: raw_fids[0::2, :],
         constants.IOFields.FIDS_DIS: raw_fids[1::2, :],
