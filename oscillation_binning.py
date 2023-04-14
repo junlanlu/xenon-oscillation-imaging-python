@@ -1,7 +1,7 @@
 """Bin dissolved phase data into high and low signal bins."""
 
 import pdb
-from typing import Tuple
+from typing import Literal, Tuple
 
 import matplotlib
 from matplotlib import pyplot as plt
@@ -17,7 +17,7 @@ def bin_rbc_oscillations(
     data_dissolved: np.ndarray,
     TR: float,
     rbc_m_ratio: float,
-    method=constants.BinningMethods.BANDPASS,
+    method: str = constants.BinningMethods.BANDPASS,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float, float]:
     """Bin dissolved phase data into high and low signal bins.
 
@@ -26,6 +26,7 @@ def bin_rbc_oscillations(
         data_dis: dissolved phase data of shape (n_projections, n_points)
         TR: repetition time in seconds
         rbc_m_ratio: RBC:m ratio
+        method: method to use for binning
     Returns:
         Tuple of detrendend data, high and low signal indices respectively.
     """
@@ -36,7 +37,7 @@ def bin_rbc_oscillations(
     data_rbc_k0, data_membrane_k0 = data_rbc[:, 0], data_membrane[:, 0]
     data_gas_k0 = data_gas[:, 0]
     # negate data if mean is negative
-    data_rbc_k0_proc = -data_gas_k0 if np.mean(data_gas_k0) < 0 else data_gas_k0
+    data_rbc_k0_proc = -data_rbc_k0 if np.mean(data_rbc_k0) < 0 else data_rbc_k0
     # smooth data
     window_size = int(1 / (5 * TR))
     window_size = window_size if window_size % 2 == 1 else window_size + 1
@@ -45,7 +46,7 @@ def bin_rbc_oscillations(
     )
     if method == constants.BinningMethods.BANDPASS:
         # normalize and detrend by gas k0
-        data_rbc_k0_proc = data_rbc_k0 / np.abs(data_gas_k0)
+        data_rbc_k0_proc = data_rbc_k0_proc / np.abs(data_gas_k0)
         # apply bandpass filter
         data_rbc_k0_proc = signal_utils.bandpass(
             data=data_rbc_k0_proc, lowcut=0.5, highcut=2.5, fs=1 / TR

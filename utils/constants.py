@@ -186,6 +186,10 @@ class BinningMethods(object):
 
     BANDPASS = "bandpass"
     FIT_SINE = "fitsine"
+    NONE = "none"
+    THRESHOLD_STRETCH = "threshold_stretch"
+    THRESHOLD = "threshold"
+    PEAKS = "peaks"
 
 
 class StatsIOFields(object):
