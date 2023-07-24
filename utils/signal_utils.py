@@ -1,12 +1,16 @@
 """Signal processing util functions."""
 import pdb
-from typing import Any, Tuple
+import sys
+from typing import Any, Literal, Tuple
 
+sys.path.append("..")
 import numpy as np
 import pywt
 import scipy.optimize as optimize
 import scipy.signal as signal
 import scipy.stats as stats
+
+from utils import constants
 
 
 def _movmean(x: np.ndarray, n: int) -> np.ndarray:
@@ -458,11 +462,31 @@ def get_heartrate(data: np.ndarray, ts: float) -> float:
     return np.abs(freq_non_dc[np.argmax(fft_data_non_dc)] * 60)
 
 
+def awgn(sig: np.ndarray, SNR: float) -> np.ndarray:
+    """Add white gaussian noise.
+
+    Args:
+        sig (np.ndarray): signal to be added with noise.
+        SNR (float): signal to noise ratio in dB.
+    """
+    sig_power = np.sum(np.abs(sig) ** 2) / len(sig)
+    noise_power = sig_power / (10 ** (SNR / 10))
+
+    if np.isreal(sig):
+        noise = np.sqrt(noise_power) * np.random.randn(len(sig))
+    else:
+        noise = np.sqrt(noise_power / 2) * (
+            np.random.randn(len(sig)) + 1j * np.random.randn(len(sig))
+        )
+    return sig + noise
+
+
 def find_high_low_indices(
     data: np.ndarray,
     peak_distance: int,
     distance_threshold: float = 0.2,
     same_length: bool = True,
+    method: str = constants.BinningMethods.PEAKS,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Find indices of high and low signal bins.
 
@@ -477,18 +501,25 @@ def find_high_low_indices(
     Returns:
         Tuple of indices of high and low signal bins respectively.
     """
-    high_peaks = find_peaks(data=data, distance=int(0.6 * peak_distance))
-    low_peaks = find_peaks(data=-data, distance=int(0.6 * peak_distance))
-
     high_indices = np.array([])
     low_indices = np.array([])
 
-    left = np.ceil(peak_distance * distance_threshold / 2).astype(int)
-    right = left + 1
-    for peak in high_peaks:
-        high_indices = np.append(high_indices, np.arange(peak - left, peak + right))
-    for peak in low_peaks:
-        low_indices = np.append(low_indices, np.arange(peak - left, peak + right))
+    if method == constants.BinningMethods.PEAKS:
+        high_peaks = find_peaks(data=data, distance=int(0.6 * peak_distance))
+        low_peaks = find_peaks(data=-data, distance=int(0.6 * peak_distance))
+
+        left = np.ceil(peak_distance * distance_threshold / 2).astype(int)
+        right = left + 1
+        for peak in high_peaks:
+            high_indices = np.append(high_indices, np.arange(peak - left, peak + right))
+        for peak in low_peaks:
+            low_indices = np.append(low_indices, np.arange(peak - left, peak + right))
+    elif method == constants.BinningMethods.THRESHOLD:
+        data_norm = (data - np.mean(data)) / np.std(data)
+        high_indices = np.argwhere(data_norm > 0.7).flatten()
+        low_indices = np.argwhere(data_norm < -0.7).flatten()
+    else:
+        raise ValueError(f"Method {method} not implemented.")
 
     # remove indices that go are below zero and above length of the data
     high_indices = np.delete(high_indices, np.argwhere(high_indices < 0))
