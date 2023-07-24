@@ -108,7 +108,7 @@ def standardize_image(image: np.ndarray) -> np.ndarray:
     return image
 
 
-def erode_image(image: np.ndarray, erosion: int) -> np.ndarray:
+def erode_image(image: np.ndarray, erosion: int = 3) -> np.ndarray:
     """Erode image.
 
     Erodes image slice by slice.
@@ -260,3 +260,22 @@ def calculate_rbc_oscillation(
         return 100 * np.subtract(image_high, image_low) / smooth_image(image_total)
     else:
         raise ValueError("Invalid method: {}.".format(method))
+
+
+def mask_image(
+    image: np.ndarray, mask: np.ndarray, method: str = constants.MaskMethods.NONE
+) -> np.ndarray:
+    """Apply mask to image.
+
+    Args:
+        image: the image to mask.
+        mask: the binary mask to apply.
+    Returns:
+        Masked image.
+    """
+    if method == constants.MaskMethods.NONE:
+        return np.multiply(image, mask)
+    elif method == constants.MaskMethods.MIN:
+        return np.multiply(image, mask) + np.multiply(np.min(image[mask > 0]), 1 - mask)
+    else:
+        raise ValueError("Invalid mask method: {}.".format(method))

@@ -27,6 +27,8 @@ def snr(image: np.ndarray, mask: np.ndarray, window_size: int = 8):
     Returns:
         Tuple of SNR and Rayleigh SNR and image noise
     """
+    # convert mask to boolean
+    mask = mask.astype(bool)
     shape = np.shape(image)
     # dilate the mask to analyze noise area away from the signal
     kernel_shape = (
@@ -69,6 +71,16 @@ def snr(image: np.ndarray, mask: np.ndarray, window_size: int = 8):
 
     SNR = image_signal / image_noise
     return SNR, SNR * 0.66, image_noise
+
+
+def mse(image1: np.ndarray, image2: np.ndarray) -> float:
+    """Calculate mean squared error between two images.
+
+    Args:
+        image1: np.ndarray
+        image2: np.ndarray
+    """
+    return np.mean((image1 - image2) ** 2)
 
 
 def inflation_volume(mask: np.ndarray, fov: float) -> float:

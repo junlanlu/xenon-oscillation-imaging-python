@@ -3,6 +3,7 @@ import pdb
 from typing import Any, Tuple
 
 import numpy as np
+import pywt
 import scipy.optimize as optimize
 import scipy.signal as signal
 import scipy.stats as stats
@@ -308,6 +309,86 @@ def fit_sine(data: np.ndarray) -> np.ndarray:
     return func(x, *popt)
 
 
+def moving_average_filter(data: np.ndarray, window_size: int = 5) -> np.ndarray:
+    """
+    Apply a moving average filter to 1D data.
+
+    Args:
+        data (np.ndarray): 1D array of data.
+        window_size (int): Size of the moving window for averaging.
+
+    Returns:
+        np.ndarray: Filtered data after applying the moving average.
+
+    Raises:
+        ValueError: If the window size is not a positive odd integer.
+
+    """
+    if window_size <= 0 or window_size % 2 == 0:
+        raise ValueError("Window size must be a positive odd integer.")
+
+    half_window = window_size // 2
+    filtered_data = np.convolve(data, np.ones(window_size) / window_size, mode="same")
+    return filtered_data[half_window:-half_window]
+
+
+def median_filter(data: np.ndarray, window_size: int = 5) -> np.ndarray:
+    """
+    Apply a median filter to 1D data.
+
+    Args:
+        data (np.ndarray): 1D array of data.
+        window_size (int): Size of the moving window for median filtering.
+
+    Returns:
+        np.ndarray: Filtered data after applying the median filter.
+
+    Raises:
+        ValueError: If the window size is not a positive odd integer.
+
+    """
+    if window_size <= 0 or window_size % 2 == 0:
+        raise ValueError("Window size must be a positive odd integer.")
+
+    half_window = window_size // 2
+    filtered_data = np.zeros_like(data)
+    for i in range(half_window, len(data) - half_window):
+        window = data[i - half_window : i + half_window + 1]
+        filtered_data[i] = np.median(window)
+
+    return filtered_data
+
+
+def wavelet_denoise(
+    signal: np.ndarray, wavelet: str = "db4", level: int = 1
+) -> np.ndarray:
+    """
+    Apply wavelet denoising to a 1D signal.
+
+    Args:
+        signal (np.ndarray): Input signal.
+        wavelet (str): Name of the wavelet function to use. Defaults to 'db4'.
+        level (int): Decomposition level for the wavelet transform. Defaults to 1.
+
+    Returns:
+        np.ndarray: Denoised signal.
+
+    """
+    # Perform wavelet decomposition
+    coeffs = pywt.wavedec(signal, wavelet, level=level)
+
+    # Estimate the noise level based on the standard deviation of the highest-frequency coefficients
+    sigma = np.median(np.abs(coeffs[-1])) / 0.6745
+
+    # Apply soft thresholding to the detail coefficients
+    denoised_coeffs = [pywt.threshold(c, value=sigma, mode="soft") for c in coeffs]
+
+    # Reconstruct the denoised signal
+    denoised_signal = pywt.waverec(denoised_coeffs, wavelet)
+
+    return denoised_signal
+
+
 def detrend(data: np.ndarray) -> np.ndarray:
     """Remove bi-exponential trend along axis from data.
 
@@ -369,7 +450,12 @@ def get_heartrate(data: np.ndarray, ts: float) -> float:
     """
     fft_data = np.abs(np.fft.fftshift(np.fft.fft(data)))
     freq = np.fft.fftshift(np.fft.fftfreq(len(data), ts))
-    return np.abs(freq[np.argmax(fft_data)] * 60)
+    # Exclude the DC frequency by considering only non-DC frequencies
+    non_dc_indices = np.nonzero(freq)
+    fft_data_non_dc = fft_data[non_dc_indices]
+    freq_non_dc = freq[non_dc_indices]
+
+    return np.abs(freq_non_dc[np.argmax(fft_data_non_dc)] * 60)
 
 
 def find_high_low_indices(

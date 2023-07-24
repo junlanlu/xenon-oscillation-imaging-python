@@ -186,6 +186,20 @@ class BinningMethods(object):
 
     BANDPASS = "bandpass"
     FIT_SINE = "fitsine"
+    NONE = "none"
+    THRESHOLD_SIMPLE = "thresholdsimple"
+    THRESHOLD_STRETCH = "thresholdstretch"
+    PEAKS = "peaks"
+    WAVELET = "wavelet"
+    MOVING_AVG = "movingavg"
+    MEDIAN = "median"
+
+
+class MaskMethods(object):
+    """Define methods to apply mask to an image."""
+
+    NONE = "none"
+    MIN = "min"
 
 
 class StatsIOFields(object):

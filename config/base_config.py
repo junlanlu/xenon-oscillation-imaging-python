@@ -40,6 +40,7 @@ class Config(config_dict.ConfigDict):
         self.scan_type = constants.ScanType.NORMALDIXON.value
         self.segmentation_key = constants.SegmentationKey.CNN_VENT.value
         self.site = constants.Site.DUKE.value
+        self.dose = Dose()
         self.subject_id = "test"
         self.rbc_m_ratio = 0.0
         self.remove_contamination = False
@@ -107,6 +108,23 @@ class Params(object):
             [-2.02, 0.53, 3.66, 7.63, 12.99, 21.07, 35.56]
         )
         self.threshold_rbc = np.array([0.066, 0.250, 0.453, 0.675, 0.956]) / 2.0
+
+
+class Dose(object):
+    """Define dose details.
+
+    These are not used in the pipeline, but are useful for creating statistics for
+    paper writing.
+
+    Attributes:
+        de_spect: dose equivalent in ml of spectroscopy scan.
+        de_dixon: dose equivalent in ml of dixon scan.
+    """
+
+    def __init__(self):
+        """Initialize the scan parameters."""
+        self.de_spect = 0.0
+        self.de_dixon = 0.0
 
 
 def get_config() -> config_dict.ConfigDict:

@@ -80,6 +80,8 @@ def get_thresholds():
 
     mean_data_trans = np.mean(data_trans)
     std_data_trans = np.std(data_trans)
+    logging.info("mean: {}".format(np.mean(data_osc)))
+    logging.info("std: {}".format(np.std(data_osc)))
     plot.plot_histogram_rbc_osc(data_osc, "tmp/healty_hist.png")
     logging.info("Lambda: %s", lambda_)
     for z in range(-2, 5):
@@ -97,7 +99,7 @@ def main(argv):
 
     Compile the healthy reference distribution and get the thresholds.
     """
-    compile_distribution()
+    # compile_distribution()
     get_thresholds()
 
 

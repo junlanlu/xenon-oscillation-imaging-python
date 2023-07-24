@@ -76,6 +76,7 @@ def main(argv):
         kernel_sharpness=1.0 / 3,
         kernel_extent=2,
         n_dcf_iter=10,
+        image_size=64,
         verbosity=True,
     )
     io_utils.export_nii(np.abs(image), "tmp/demo.nii")

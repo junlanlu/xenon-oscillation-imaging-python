@@ -173,6 +173,10 @@ r/**
 
 # ignore r stats folder 
 simulations/data/**
+simulations/figures/**
+simulations/tmp/**
+simulations/matlab/**
+simulations/python/**
 !simulations/data/.gitkeep
 
 # simulations
@@ -180,3 +184,7 @@ simulations/data/**
 # scripts
 scripts/**
 scripts/.gitkeep
+
+# ignore all folders named figures
+**/figures/**
+!**/figures/.gitkeep

@@ -155,7 +155,6 @@ class Subject(object):
             self.dict_ute = io_utils.import_matstruct_to_dict(mdict["dict_ute"])
         self.data_dissolved = mdict["data_dissolved"]
         self.data_dissolved_norm = mdict["data_dissolved_norm"]
-        self.data_dissolved_norm = mdict["data_dissolved_norm"]
         self.data_gas = mdict["data_gas"]
         self.data_rbc_k0 = mdict["data_rbc_k0"].flatten()
         self.high_indices = mdict["high_indices"].flatten()

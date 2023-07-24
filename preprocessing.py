@@ -191,13 +191,19 @@ def prepare_data_and_traj_keyhole(
     normalization = (
         np.mean(np.abs(data_copy[bin_indices, 0])) * 1 / np.abs(data_copy[:, 0])
     )
+    data = data * np.mean(np.abs(data_copy[bin_indices, 0]))
     data = np.divide(data, np.expand_dims(normalization, -1))
     data[bin_indices, 0:key_radius] = data_copy[bin_indices, 0:key_radius]
-    return np.delete(
+    data_flatten = np.delete(
         recon_utils.flatten_data(data), np.where(data.flatten() == 0.0), axis=0
-    ), np.delete(
+    )
+
+    traj_flatten = np.delete(
         recon_utils.flatten_traj(traj), np.where(data.flatten() == 0.0), axis=0
     )
+    indices = np.argsort(np.abs(data_flatten.flatten()))
+
+    return data_flatten[indices], traj_flatten[indices, :]
 
 
 def normalize_data(data: np.ndarray, normalization: np.ndarray) -> np.ndarray:
