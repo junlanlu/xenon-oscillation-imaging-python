@@ -84,6 +84,7 @@ def get_thresholds():
     logging.info("std: {}".format(np.std(data_osc)))
     plot.plot_histogram_rbc_osc(data_osc, "tmp/healty_hist.png")
     logging.info("Lambda: %s", lambda_)
+
     for z in range(-2, 5):
         threshold = signal_utils.inverse_boxcox(
             lambda_, mean_data_trans + z * std_data_trans, scale_factor

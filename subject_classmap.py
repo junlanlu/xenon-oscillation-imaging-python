@@ -413,6 +413,7 @@ class Subject(object):
         """Calculate the oscillation image from the rbc high, low, and normal images."""
         # calculate the mask for the RBC image with sufficient SNR, excluding defects
         image_noise = metrics.snr(self.image_rbc, self.mask)[2]
+
         self.mask_rbc = np.logical_and(self.mask, self.image_rbc > image_noise)
         self.image_rbc_osc = img_utils.calculate_rbc_oscillation(
             self.image_rbc_high, self.image_rbc_low, self.image_rbc_norm, self.mask_rbc
@@ -447,6 +448,12 @@ class Subject(object):
             constants.StatsIOFields.SNR_RBC_LOW: metrics.snr(
                 self.image_rbc_low, self.mask
             )[0],
+            constants.StatsIOFields.SNR_DISSOLVED: metrics.snr(
+                np.abs(self.image_dissolved), self.mask
+            )[1],
+            constants.StatsIOFields.SNR_GAS: metrics.snr(
+                np.abs(self.image_gas), self.mask
+            )[1],
             constants.StatsIOFields.PCT_OSC_DEFECT: metrics.bin_percentage(
                 self.image_rbc_osc_binned, np.array([1])
             ),

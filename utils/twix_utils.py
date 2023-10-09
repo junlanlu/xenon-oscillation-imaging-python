@@ -182,7 +182,6 @@ def get_ramp_time(twix_obj: mapvbvd._attrdict.AttrDict) -> float:
         ramp_time = float(twix_obj["hdr"]["Meas"]["alRegridRampupTime"].split()[0])
     except:
         pass
-
     return max(100, ramp_time) if ramp_time < 100 else ramp_time
 
 

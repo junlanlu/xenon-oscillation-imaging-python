@@ -210,6 +210,8 @@ class StatsIOFields(object):
     RBC_M_RATIO = "rbc_m_ratio"
     SCAN_DATE = "scan_date"
     PROCESS_DATE = "process_date"
+    SNR_GAS = "snr_gas"
+    SNR_DISSOLVED = "snr_dissolved"
     SNR_RBC_LOW = "snr_rbc_low"
     SNR_RBC_HIGH = "snr_rbc_high"
     SNR_RBC = "snr_rbc"
