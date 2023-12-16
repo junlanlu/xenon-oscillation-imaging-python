@@ -55,17 +55,15 @@ def compile_distribution():
         raise ValueError("Invalid cohort name")
 
     hist_osc = np.array([])
+
     for subject in subjects:
-        try:
-            config_obj = importlib.import_module(
-                name=subject[:-3].replace("/", "."), package=None
-            )
-            config = config_obj.get_config()
-            logging.info("Processing subject: %s", config.subject_id)
-            image_rbc_osc = oscillation_mapping_analysis(config)
-            hist_osc = np.append(hist_osc, image_rbc_osc[image_rbc_osc != 0])
-        except:
-            logging.warning("Failed to process subject: %s", subject)
+        config_obj = importlib.import_module(
+            name=subject[:-3].replace("/", "."), package=None
+        )
+        config = config_obj.get_config()
+        logging.info("Processing subject: %s", config.subject_id)
+        image_rbc_osc = oscillation_mapping_analysis(config)
+        hist_osc = np.append(hist_osc, image_rbc_osc[image_rbc_osc != 0])
     io_utils.export_np(hist_osc, "data/reference_dist.npy")
 
 
@@ -90,6 +88,7 @@ def get_thresholds():
             lambda_, mean_data_trans + z * std_data_trans, scale_factor
         )
         logging.info("Box-cox threshold: %s", threshold)
+
     for z in range(-2, 5):
         threshold = np.mean(data_osc) + z * np.std(data_osc)
         logging.info("Gaussian threshold: %s", threshold)
@@ -100,7 +99,7 @@ def main(argv):
 
     Compile the healthy reference distribution and get the thresholds.
     """
-    # compile_distribution()
+    compile_distribution()
     get_thresholds()
 
 

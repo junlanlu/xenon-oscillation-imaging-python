@@ -514,7 +514,7 @@ def find_high_low_indices(
             high_indices = np.append(high_indices, np.arange(peak - left, peak + right))
         for peak in low_peaks:
             low_indices = np.append(low_indices, np.arange(peak - left, peak + right))
-    elif method == constants.BinningMethods.THRESHOLD:
+    elif method == constants.BinningMethods.THRESHOLD_SIMPLE:
         data_norm = (data - np.mean(data)) / np.std(data)
         high_indices = np.argwhere(data_norm > 0.7).flatten()
         low_indices = np.argwhere(data_norm < -0.7).flatten()

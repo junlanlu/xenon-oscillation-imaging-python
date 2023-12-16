@@ -55,24 +55,21 @@ def main(argv):
         raise ValueError("Invalid cohort name")
 
     for subject in subjects:
-        try:
-            config_obj = importlib.import_module(
-                name=subject[:-3].replace("/", "."), package=None
-            )
-            config = config_obj.get_config()
-            logging.info("Processing subject: %s", config.subject_id)
-            if FLAGS.force_recon:
-                oscillation_mapping_reconstruction(config)
-            elif FLAGS.force_readin:
-                oscillation_mapping_readin(config)
-            elif config.processes.oscillation_mapping_reconstruction:
-                oscillation_mapping_reconstruction(config)
-            elif config.processes.oscillation_mapping_readin:
-                oscillation_mapping_readin(config)
-            else:
-                pass
-        except:
-            logging.warning("Failed to process subject: %s", subject)
+        config_obj = importlib.import_module(
+            name=subject[:-3].replace("/", "."), package=None
+        )
+        config = config_obj.get_config()
+        logging.info("Processing subject: %s", config.subject_id)
+        if FLAGS.force_recon:
+            oscillation_mapping_reconstruction(config)
+        elif FLAGS.force_readin:
+            oscillation_mapping_readin(config)
+        elif config.processes.oscillation_mapping_reconstruction:
+            oscillation_mapping_reconstruction(config)
+        elif config.processes.oscillation_mapping_readin:
+            oscillation_mapping_readin(config)
+        else:
+            pass
 
 
 if __name__ == "__main__":

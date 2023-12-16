@@ -2,6 +2,8 @@
 
 The oscillation imaging pipeline, developed at the [Driehuyslab](https://sites.duke.edu/driehuyslab/). Before moving to the installation process, download or clone this repository.
 
+Please cite: Lu J, Alenezi F, Bier E, et al. Optimized quantitative mapping of cardiopulmonary oscillations using hyperpolarized 129Xe gas exchange MRI: Digital phantoms and clinical evaluation in CTEPH. Magn Reson Med. 2023; 1-15. doi: 10.1002/mrm.29965 if this benefited your work
+Reference: [https://onlinelibrary.wiley.com/doi/10.1002/mrm.29965](https://onlinelibrary.wiley.com/doi/10.1002/mrm.29965)
 ## Table of contents:
 
 1. [Setup](#setup)
